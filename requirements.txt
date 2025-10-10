@@ -1,0 +1,11 @@
+boto3
+pdfplumber
+pytesseract
+Pillow
+googlemaps
+folium
+rapidfuzz
+openpyxl
+pandas
+reportlab
+faker
