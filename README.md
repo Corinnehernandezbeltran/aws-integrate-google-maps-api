@@ -1,27 +1,50 @@
 # Proyecto Wenia - Procesamiento de Direcciones🌏
+# Corinne Hernández B
 
-Este proyecto fue desarrollado como parte de una **prueba técnica para Wenia**.  
-Su objetivo es automatizar el procesamiento de archivos PDF almacenados en AWS S3, extraer direcciones, estandarizarlas y
- obtener sus coordenadas geográficas mediante la API de Google Maps.
+Este proyecto automatiza la extracción y georreferenciación de direcciones contenidas en archivos PDF almacenados en AWS S3, generando un mapa interactivo y un archivo Excel con los resultados.
+El flujo completo permite pasar de datos sin procesar a resultados listos para análisis y visualización de manera eficiente y reproducible.
+---
+
+## El flujo del proyecto incluye:
+
+Cargar archivos PDF desde un bucket en S3.
+Extraer texto de los PDFs para obtener direcciones.
+Normalizar y estandarizar las direcciones para mejorar la precisión.
+Georreferenciar las direcciones usando la API de Google Maps.
+Generar un Excel con coordenadas y un mapa interactivo HTML.
+
+## Tecnologías y Herramientas
+
+Python: Pandas, PyPDF2, Requests, Google Maps API
+AWS S3: Almacenamiento de archivos PDF
+Google colab.
+Excel y HTML: Resultados de la extracción y visualización
+
+## Resultados
+
+direcciones_resultado.xlsx: Contiene las direcciones procesadas y sus coordenadas geográficas.
+mapa_direcciones_resultado.html: Mapa interactivo con las ubicaciones georreferenciadas.
+Incluye métricas de similitud entre las direcciones originales y normalizadas para garantizar calidad en la georreferenciación.
 
 ---
 
-## Funcionalidades principales
+## Cómo ejecutar el proyecto
 
-- Lectura de archivos **PDF** con datos de clientes.  
-- Extracción de texto y detección de **direcciones**.  
-- Normalización y comparación de variantes de dirección.  
-- Geocodificación automática con **Google Maps API**.  
-- Generación de un archivo Excel con los resultados.  
-- Creación de un **mapa interactivo HTML** con las ubicaciones detectadas.
+1. Clonar el repositorio:
+  git clone https://github.com/Corinnehernandezbeltran/prueba-wenia.git
 
----
+2. Navegar al directorio
+  cd prueba-wenia
 
-## Requisitos
+3. Instalar dependencias:
+   pip install -r requirements.txt
+   
+4. Abrir el notebook
+   jupyter notebook Corinne_Hernández_prueba_wenia.ipynb
 
-El proyecto está diseñado para ejecutarse en **Google Colab** .
-Se ingresan las credenciales del perfil creador pero permanecen ocultas, en caso de requerir ejecutarlo, se debe solicitar 
-el permiso al bucket de s3 y habilitar el API de Google.
+5. Seguir los pasos dentro del notebook para cargar los PDFs, procesar las direcciones y generar resultados.
+  Nota: Necesitarás una clave de API de Google Maps para ejecutar la geocodificación. Para el acceso al bucket se debe solicita al acceso al Autor.
+
 
 Dependencias principales:
 ```bash
@@ -32,25 +55,6 @@ Se requiere:
 -Credenciales válidas de AWS S3 configuradas (Access Key y Secret Key).
 -Una Google Maps API Key activa almacenada como variable de entorno:
 os.environ["GOOGLE_API_KEY"] = "TU_API_KEY_AQUI" # se genera de la configuracion de la api desde google
-
-
-EJECUCION PASO A PASO:
-Clonar o descargar este repositorio:
-git clone https://github.com/Corinnehernandezbeltran/prueba-wenia
-cd prueba-wenia
-
-Abrir el archivo principal en Google Colab (.ipynb).
-
--Ejecutar las celdas en orden:
--Generación de datos y PDFs.
--Subida de archivos a S3.
--Procesamiento de direcciones.
--Generación de mapa y Excel.
-
-El resultado incluye:
--direcciones_resultado.xlsx → listado de direcciones y coordenadas.
--mapa_direcciones.html → mapa interactivo con las ubicaciones.
--El sistema imprime por consola el número de archivos procesados exitosamente y genera los archivos finales con los resultados de validación
 
 ## Visualización del Mapa
 
