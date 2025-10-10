@@ -36,7 +36,7 @@ os.environ["GOOGLE_API_KEY"] = "TU_API_KEY_AQUI" # se genera de la configuracion
 
 EJECUCION PASO A PASO:
 Clonar o descargar este repositorio:
-git clone https://github.com/prueba-wenia.git
+git clone https://github.com/Corinnehernandezbeltran/prueba-wenia
 cd prueba-wenia
 
 Abrir el archivo principal en Google Colab (.ipynb).
