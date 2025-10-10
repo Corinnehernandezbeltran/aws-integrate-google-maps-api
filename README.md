@@ -1,8 +1,8 @@
 # Proyecto Wenia - Procesamiento de Direcciones🌏
-# Corinne Hernández B
 
 Este proyecto automatiza la extracción y georreferenciación de direcciones contenidas en archivos PDF almacenados en AWS S3, generando un mapa interactivo y un archivo Excel con los resultados.
 El flujo completo permite pasar de datos sin procesar a resultados listos para análisis y visualización de manera eficiente y reproducible.
+
 ---
 
 ## El flujo del proyecto incluye:
