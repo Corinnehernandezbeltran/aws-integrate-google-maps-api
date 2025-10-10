@@ -19,7 +19,7 @@ Su objetivo es automatizar el procesamiento de archivos PDF almacenados en AWS S
 
 ## Requisitos
 
-El proyecto está diseñado para ejecutarse en **Google Colab** (no requiere configuración adicional).
+El proyecto está diseñado para ejecutarse en **Google Colab** .
 Se ingresan las credenciales del perfil creador pero permanecen ocultas, en caso de requerir ejecutarlo, se debe solicitar 
 el permiso al bucket de s3 y habilitar el API de Google.
 
@@ -51,6 +51,11 @@ El resultado incluye:
 -direcciones_resultado.xlsx → listado de direcciones y coordenadas.
 -mapa_direcciones.html → mapa interactivo con las ubicaciones.
 -El sistema imprime por consola el número de archivos procesados exitosamente y genera los archivos finales con los resultados de validación
+
+## Visualización del Mapa
+
+Puedes ver el mapa interactivo generado aquí:  
+👉 [Mapa interactivo de direcciones](https://corinnehernandezbeltran.github.io/prueba-wenia/mapa_direcciones.html)
 
 
 Autor: Corinne Hernández Beltrán
