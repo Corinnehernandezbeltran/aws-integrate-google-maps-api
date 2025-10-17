@@ -27,8 +27,8 @@ from folium.plugins import MarkerCluster
 from unidecode import unidecode
 
 #%%Configuracion credenciales AWS
-AWS_ACCESS_KEY_ID = input("ATENCIÓN! Ingresa tu AWS_ACCESS_KEY_ID🔑: ")
-AWS_SECRET_ACCESS_KEY = input("ATENCIÓN! Ingresa tu AWS_SECRET_ACCESS_KEY🕵️: ")
+AWS_ACCESS_KEY_ID = input("ATENCIÓN! Ingresa tu AWS_ACCESS_KEY_ID: ")
+AWS_SECRET_ACCESS_KEY = input("ATENCIÓN! Ingresa tu AWS_SECRET_ACCESS_KEY: ")
 AWS_DEFAULT_REGION = "us-east-2"  # Region Ohio para el ejercicio.
 
 os.environ["AWS_ACCESS_KEY_ID"] = AWS_ACCESS_KEY_ID
@@ -38,7 +38,7 @@ os.environ["AWS_DEFAULT_REGION"] = AWS_DEFAULT_REGION
 print("Credenciales cargadas de forma temporal y segura.")
 
 #%% Se ingresa la clave de google api para utilizar el servicio.
-GOOGLE_API_KEY = input("ATENCIÓN! Ingresa tu API key de Google Maps 🗺️:  ")
+GOOGLE_API_KEY = input("ATENCIÓN! Ingresa tu API key de Google Maps:  ")
 os.environ["GOOGLE_API_KEY"] = GOOGLE_API_KEY
 
 #%%% Configuración de Faker, para generar dircciones falsas pero realistas
