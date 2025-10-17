@@ -15,27 +15,39 @@ Generar un Excel con coordenadas y un mapa interactivo HTML.
 
 ## Tecnologías y Herramientas
 
-Python: Pandas, PyPDF2, Requests, Google Maps API, Anaconda.
-AWS S3: Almacenamiento de archivos PDF
-Excel y HTML: Resultados de la extracción y visualización
+Python (Anaconda / Spyder) → desarrollo principal
 
-## Resultados
+Librerías: pandas, pdfplumber, pytesseract, boto3, googlemaps, folium, faker, reportlab, unidecode
 
-direcciones_resultado.xlsx: Contiene las direcciones procesadas y sus coordenadas geográficas.
-mapa_direcciones_resultado.html: Mapa interactivo con las ubicaciones georreferenciadas.
-Incluye métricas de similitud entre las direcciones originales y normalizadas para garantizar calidad en la georreferenciación.
+AWS S3 → almacenamiento y gestión de archivos PDF
+
+Excel y HTML (Folium) → exportación de resultados y visualización de mapas interactivos
+
+## Requisitos previos: 
+
+1. Debes tener una clave de API válida configurada como variable de entorno: 
+
+        os.environ["GOOGLE_API_KEY"] = "TU_API_KEY_AQUI" # Se ingresa por input al ejecutar el script 
+        
+Puedes generar esta clave desde la Consola de Google Cloud: https://console.cloud.google.com/
+
+
+2. Se requiere acceso a un bucket S3 llamado prueba-wenia:
+
+🔹 Si ya tienes acceso: el código usará tus credenciales de AWS.
+
+🔹 Si no tienes acceso: el script creará automáticamente el bucket prueba-wenia, pero igualmente debes ingresar tus credenciales válidas para que la conexión funcione.
+
+        os.environ["AWS_ACCESS_KEY_ID"] = "TU_ACCESS_KEY"        # Se ingresa por input al ejecutar el script
+        os.environ["AWS_SECRET_ACCESS_KEY"] = "TU_SECRET_KEY"    # Se ingresa por input al ejecutar el script
+        os.environ["AWS_DEFAULT_REGION"] = "us-east-2"           # Ya configurada para la región Ohio (no requiere cambios)
+        
+La región us-east-2 (Ohio) ya está establecida en el código, por lo que no es necesario modificarla.
+Solo asegúrate de ingresar tus Access Key y Secret Key cuando el programa las solicite.
 
 ---
 
 ## Cómo ejecutar el proyecto
-
-Requisitos previos: 
--Debes tener una clave de API válida configurada como variable de entorno: os.environ["GOOGLE_API_KEY"] = "TU_API_KEY_AQUI" Puedes generar esta clave desde la Consola de Google Cloud
--Se requiere acceso a un bucket S3 (prueba-wenia). Configura tus credenciales antes de ejecutar el script, si no tienes acceso al bucket solo con las credenciales se crea la carpeta en tu s3. O solicitar permiso 
-a autor, Corinne Hernández.
-        os.environ["AWS_ACCESS_KEY_ID"] = "TU_ACCESS_KEY" --Ingresar TU_ACCESS_KEY (son inputs en el .py)
-        os.environ["AWS_SECRET_ACCESS_KEY"] = "TU_SECRET_KEY" --Ingresar TU_ACCESS_KEY (son inputs en el .py)
-        os.environ["AWS_DEFAULT_REGION"] = "us-east-2" Ya está configurada en ohio no se debe hacer nada.
 
 1. Clonar el repositorio:
   git clone https://github.com/Corinnehernandezbeltran/prueba-wenia.git
@@ -44,32 +56,55 @@ a autor, Corinne Hernández.
   cd prueba-wenia
 
 3. Instalar dependencias:
+4. 
    pip install -r requirements.txt
+   
    También puedes instalarlas manualmente si lo prefieres:
+   
    pip install pdfplumber pytesseract pillow boto3 googlemaps folium rapidfuzz openpyxl pandas faker reportlab unidecode
    
-5. Ejecutar directamente el script:
+6. Ejecutar directamente el script:
    python corinne_hernandez_prueba_wenia.py
 
-Dependencias principales:
+## Dependencias principales:
 
 pdfplumber → extracción de texto desde PDFs
+
 pytesseract → reconocimiento óptico de caracteres (OCR)
+
 boto3 → conexión con AWS S3
+
 googlemaps → geocodificación de direcciones
+
 folium → generación de mapas interactivos
+
 rapidfuzz → comparación de similitud entre textos
+
 pandas, openpyxl → manejo y exportación de datos
+
 faker, reportlab → generación de PDFs simulados
+
 unidecode → limpieza de tildes y caracteres especiales
 
-## Visualización del Mapa
+## Resultados
+
+direcciones_resultado.xlsx: Contiene las direcciones procesadas y sus coordenadas geográficas.
+
+mapa_direcciones_resultado.html: Mapa interactivo con las ubicaciones georreferenciadas.
 
 Puedes ver el mapa interactivo generado aquí:  
+
 👉 [Mapa interactivo de direcciones](https://corinnehernandezbeltran.github.io/prueba-wenia/mapa_direcciones.html)
 
 
-👩‍💻 Corinne Hernández Beltrán
-Lenguaje: Python
-Entorno de ejecución: Spyder (Anaconda)
-Repositorio: github.com/Corinnehernandezbeltran/prueba-wenia
+Incluye métricas de similitud entre las direcciones originales y normalizadas para garantizar calidad en la georreferenciación.
+
+
+## 👩‍💻 Autor
+
+**Corinne Hernández Beltrán**  
+---
+
+**Lenguaje:** Python 🐍  
+**Entorno de ejecución:** Spyder (Anaconda)  
+**Repositorio:** [github.com/Corinnehernandezbeltran/prueba-wenia](https://github.com/Corinnehernandezbeltran/prueba-wenia)
