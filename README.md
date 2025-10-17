@@ -15,9 +15,8 @@ Generar un Excel con coordenadas y un mapa interactivo HTML.
 
 ## Tecnologías y Herramientas
 
-Python: Pandas, PyPDF2, Requests, Google Maps API
+Python: Pandas, PyPDF2, Requests, Google Maps API, Anaconda.
 AWS S3: Almacenamiento de archivos PDF
-Google colab.
 Excel y HTML: Resultados de la extracción y visualización
 
 ## Resultados
