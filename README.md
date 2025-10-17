@@ -30,6 +30,14 @@ Incluye métricas de similitud entre las direcciones originales y normalizadas p
 
 ## Cómo ejecutar el proyecto
 
+Requisitos previos: 
+-Debes tener una clave de API válida configurada como variable de entorno: os.environ["GOOGLE_API_KEY"] = "TU_API_KEY_AQUI" Puedes generar esta clave desde la Consola de Google Cloud
+-Se requiere acceso a un bucket S3 (prueba-wenia). Configura tus credenciales antes de ejecutar el script, si no tienes acceso al bucket solo con las credenciales se crea la carpeta en tu s3. O solicitar permiso 
+a autor, Corinne Hernández.
+        os.environ["AWS_ACCESS_KEY_ID"] = "TU_ACCESS_KEY" --Ingresar TU_ACCESS_KEY (son inputs en el .py)
+        os.environ["AWS_SECRET_ACCESS_KEY"] = "TU_SECRET_KEY" --Ingresar TU_ACCESS_KEY (son inputs en el .py)
+        os.environ["AWS_DEFAULT_REGION"] = "us-east-2" Ya está configurada en ohio no se debe hacer nada.
+
 1. Clonar el repositorio:
   git clone https://github.com/Corinnehernandezbeltran/prueba-wenia.git
 
@@ -38,23 +46,23 @@ Incluye métricas de similitud entre las direcciones originales y normalizadas p
 
 3. Instalar dependencias:
    pip install -r requirements.txt
+   También puedes instalarlas manualmente si lo prefieres:
+   pip install pdfplumber pytesseract pillow boto3 googlemaps folium rapidfuzz openpyxl pandas faker reportlab unidecode
    
-4. Abrir el notebook
-   jupyter notebook Corinne_Hernández_prueba_wenia.ipynb
-
-5. Seguir los pasos dentro del notebook para cargar los PDFs, procesar las direcciones y generar resultados.
-  Nota: Necesitarás una clave de API de Google Maps para ejecutar la geocodificación. Para el acceso al bucket se debe solicita al acceso al Autor.
-
+5. Ejecutar directamente el script:
+   python corinne_hernandez_prueba_wenia.py
 
 Dependencias principales:
-```bash
-pip install pdfplumber pytesseract pillow boto3 googlemaps folium rapidfuzz openpyxl pandas faker reportlab
 
-
-Se requiere:
--Credenciales válidas de AWS S3 configuradas (Access Key y Secret Key).
--Una Google Maps API Key activa almacenada como variable de entorno:
-os.environ["GOOGLE_API_KEY"] = "TU_API_KEY_AQUI" # se genera de la configuracion de la api desde google
+pdfplumber → extracción de texto desde PDFs
+pytesseract → reconocimiento óptico de caracteres (OCR)
+boto3 → conexión con AWS S3
+googlemaps → geocodificación de direcciones
+folium → generación de mapas interactivos
+rapidfuzz → comparación de similitud entre textos
+pandas, openpyxl → manejo y exportación de datos
+faker, reportlab → generación de PDFs simulados
+unidecode → limpieza de tildes y caracteres especiales
 
 ## Visualización del Mapa
 
@@ -62,6 +70,7 @@ Puedes ver el mapa interactivo generado aquí:
 👉 [Mapa interactivo de direcciones](https://corinnehernandezbeltran.github.io/prueba-wenia/mapa_direcciones.html)
 
 
-Autor: Corinne Hernández Beltrán
+👩‍💻 Corinne Hernández Beltrán
 Lenguaje: Python
-Ejecución: Google Colab
+Entorno de ejecución: Spyder (Anaconda)
+Repositorio: github.com/Corinnehernandezbeltran/prueba-wenia
