@@ -1,961 +1,394 @@
-{
-  "nbformat": 4,
-  "nbformat_minor": 0,
-  "metadata": {
-    "colab": {
-      "provenance": []
-    },
-    "kernelspec": {
-      "name": "python3",
-      "display_name": "Python 3"
-    },
-    "language_info": {
-      "name": "python"
-    }
-  },
-  "cells": [
-    {
-      "cell_type": "code",
-      "source": [
-        "!pip install pdfplumber pytesseract pillow boto3 googlemaps folium rapidfuzz openpyxl pandas\n",
-        "!apt-get update -qq\n",
-        "!apt-get install -y -qq tesseract-ocr\n",
-        "!pip install faker\n",
-        "!pip install reportlab"
-      ],
-      "metadata": {
-        "colab": {
-          "base_uri": "https://localhost:8080/"
-        },
-        "id": "71whiiJUHNAt",
-        "outputId": "4041b709-f138-41ed-9499-edb0587d0aab",
-        "collapsed": true
-      },
-      "execution_count": 31,
-      "outputs": [
-        {
-          "output_type": "stream",
-          "name": "stdout",
-          "text": [
-            "Requirement already satisfied: pdfplumber in /usr/local/lib/python3.12/dist-packages (0.11.7)\n",
-            "Requirement already satisfied: pytesseract in /usr/local/lib/python3.12/dist-packages (0.3.13)\n",
-            "Requirement already satisfied: pillow in /usr/local/lib/python3.12/dist-packages (11.3.0)\n",
-            "Requirement already satisfied: boto3 in /usr/local/lib/python3.12/dist-packages (1.40.49)\n",
-            "Requirement already satisfied: googlemaps in /usr/local/lib/python3.12/dist-packages (4.10.0)\n",
-            "Requirement already satisfied: folium in /usr/local/lib/python3.12/dist-packages (0.20.0)\n",
-            "Requirement already satisfied: rapidfuzz in /usr/local/lib/python3.12/dist-packages (3.14.1)\n",
-            "Requirement already satisfied: openpyxl in /usr/local/lib/python3.12/dist-packages (3.1.5)\n",
-            "Requirement already satisfied: pandas in /usr/local/lib/python3.12/dist-packages (2.2.2)\n",
-            "Requirement already satisfied: pdfminer.six==20250506 in /usr/local/lib/python3.12/dist-packages (from pdfplumber) (20250506)\n",
-            "Requirement already satisfied: pypdfium2>=4.18.0 in /usr/local/lib/python3.12/dist-packages (from pdfplumber) (4.30.0)\n",
-            "Requirement already satisfied: charset-normalizer>=2.0.0 in /usr/local/lib/python3.12/dist-packages (from pdfminer.six==20250506->pdfplumber) (3.4.3)\n",
-            "Requirement already satisfied: cryptography>=36.0.0 in /usr/local/lib/python3.12/dist-packages (from pdfminer.six==20250506->pdfplumber) (43.0.3)\n",
-            "Requirement already satisfied: packaging>=21.3 in /usr/local/lib/python3.12/dist-packages (from pytesseract) (25.0)\n",
-            "Requirement already satisfied: botocore<1.41.0,>=1.40.49 in /usr/local/lib/python3.12/dist-packages (from boto3) (1.40.49)\n",
-            "Requirement already satisfied: jmespath<2.0.0,>=0.7.1 in /usr/local/lib/python3.12/dist-packages (from boto3) (1.0.1)\n",
-            "Requirement already satisfied: s3transfer<0.15.0,>=0.14.0 in /usr/local/lib/python3.12/dist-packages (from boto3) (0.14.0)\n",
-            "Requirement already satisfied: requests<3.0,>=2.20.0 in /usr/local/lib/python3.12/dist-packages (from googlemaps) (2.32.4)\n",
-            "Requirement already satisfied: branca>=0.6.0 in /usr/local/lib/python3.12/dist-packages (from folium) (0.8.2)\n",
-            "Requirement already satisfied: jinja2>=2.9 in /usr/local/lib/python3.12/dist-packages (from folium) (3.1.6)\n",
-            "Requirement already satisfied: numpy in /usr/local/lib/python3.12/dist-packages (from folium) (2.0.2)\n",
-            "Requirement already satisfied: xyzservices in /usr/local/lib/python3.12/dist-packages (from folium) (2025.4.0)\n",
-            "Requirement already satisfied: et-xmlfile in /usr/local/lib/python3.12/dist-packages (from openpyxl) (2.0.0)\n",
-            "Requirement already satisfied: python-dateutil>=2.8.2 in /usr/local/lib/python3.12/dist-packages (from pandas) (2.9.0.post0)\n",
-            "Requirement already satisfied: pytz>=2020.1 in /usr/local/lib/python3.12/dist-packages (from pandas) (2025.2)\n",
-            "Requirement already satisfied: tzdata>=2022.7 in /usr/local/lib/python3.12/dist-packages (from pandas) (2025.2)\n",
-            "Requirement already satisfied: urllib3!=2.2.0,<3,>=1.25.4 in /usr/local/lib/python3.12/dist-packages (from botocore<1.41.0,>=1.40.49->boto3) (2.5.0)\n",
-            "Requirement already satisfied: MarkupSafe>=2.0 in /usr/local/lib/python3.12/dist-packages (from jinja2>=2.9->folium) (3.0.3)\n",
-            "Requirement already satisfied: six>=1.5 in /usr/local/lib/python3.12/dist-packages (from python-dateutil>=2.8.2->pandas) (1.17.0)\n",
-            "Requirement already satisfied: idna<4,>=2.5 in /usr/local/lib/python3.12/dist-packages (from requests<3.0,>=2.20.0->googlemaps) (3.10)\n",
-            "Requirement already satisfied: certifi>=2017.4.17 in /usr/local/lib/python3.12/dist-packages (from requests<3.0,>=2.20.0->googlemaps) (2025.10.5)\n",
-            "Requirement already satisfied: cffi>=1.12 in /usr/local/lib/python3.12/dist-packages (from cryptography>=36.0.0->pdfminer.six==20250506->pdfplumber) (2.0.0)\n",
-            "Requirement already satisfied: pycparser in /usr/local/lib/python3.12/dist-packages (from cffi>=1.12->cryptography>=36.0.0->pdfminer.six==20250506->pdfplumber) (2.23)\n",
-            "W: Skipping acquire of configured file 'main/source/Sources' as repository 'https://r2u.stat.illinois.edu/ubuntu jammy InRelease' does not seem to provide it (sources.list entry misspelt?)\n",
-            "Requirement already satisfied: faker in /usr/local/lib/python3.12/dist-packages (37.11.0)\n",
-            "Requirement already satisfied: tzdata in /usr/local/lib/python3.12/dist-packages (from faker) (2025.2)\n",
-            "Collecting reportlab\n",
-            "  Downloading reportlab-4.4.4-py3-none-any.whl.metadata (1.7 kB)\n",
-            "Requirement already satisfied: pillow>=9.0.0 in /usr/local/lib/python3.12/dist-packages (from reportlab) (11.3.0)\n",
-            "Requirement already satisfied: charset-normalizer in /usr/local/lib/python3.12/dist-packages (from reportlab) (3.4.3)\n",
-            "Downloading reportlab-4.4.4-py3-none-any.whl (2.0 MB)\n",
-            "\u001b[2K   \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m2.0/2.0 MB\u001b[0m \u001b[31m22.5 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m\n",
-            "\u001b[?25hInstalling collected packages: reportlab\n",
-            "Successfully installed reportlab-4.4.4\n"
-          ]
-        }
-      ]
-    },
-    {
-      "cell_type": "code",
-      "source": [
-        "#Importe de librerias necesarias\n",
-        "import os\n",
-        "import io\n",
-        "import re\n",
-        "import random\n",
-        "import boto3\n",
-        "import pandas as pd\n",
-        "from faker import Faker\n",
-        "from PIL import Image\n",
-        "import pdfplumber\n",
-        "import pytesseract\n",
-        "from rapidfuzz import fuzz\n",
-        "from reportlab.pdfgen import canvas\n",
-        "from reportlab.lib.pagesizes import letter\n",
-        "import googlemaps\n",
-        "import folium\n",
-        "from google.colab import files\n",
-        "import folium\n",
-        "from folium.plugins import MarkerCluster\n",
-        "\n"
-      ],
-      "metadata": {
-        "id": "yGxamHkdUVgF"
-      },
-      "execution_count": 77,
-      "outputs": []
-    },
-    {
-      "cell_type": "code",
-      "source": [
-        "# Configuración de Faker, para generar datos falsos pero realistas\n",
-        "generador = Faker(\"es_CO\")\n",
-        "\n",
-        "# Crear carpeta para los archivos PDF\n",
-        "os.makedirs(\"documentos_clientes_wenia\", exist_ok=True)\n",
-        "\n",
-        "# Función para crear la dirección aleatoria\n",
-        "def crear_direccion():\n",
-        "    tipos_via = [\"CRA\", \"KRA\", \"CALLE\", \"AV\", \"TRANSVERSAL\"]\n",
-        "    return f\"{random.choice(tipos_via)} {random.randint(1,99)} # {random.randint(1,99)} - {random.randint(1,99)}\"\n",
-        "\n",
-        "# Generar datos para 40 clientes (id, nombre, direccion, correo)\n",
-        "cantidad_clientes = 40\n",
-        "lista_clientes = []\n",
-        "\n",
-        "for i in range(cantidad_clientes):\n",
-        "    nombre = generador.name()\n",
-        "    direccion = crear_direccion() + f\", {generador.city()}\"\n",
-        "    correo = generador.email()\n",
-        "\n",
-        "    lista_clientes.append({\n",
-        "        \"id_cliente\": i + 1,\n",
-        "        \"nombre\": nombre,\n",
-        "        \"direccion\": direccion,\n",
-        "        \"correo\": correo,\n",
-        "    })\n",
-        "\n",
-        "    ruta_pdf = f\"documentos_clientes_wenia/cliente_wenialover{i+1}.pdf\"\n",
-        "    pdf = canvas.Canvas(ruta_pdf, pagesize=letter)\n",
-        "    pdf.drawString(100, 750, f\"Registro del cliente {nombre}\")\n",
-        "    pdf.drawString(100, 710, f\"Correo: {correo}\")\n",
-        "    pdf.drawString(100, 670, f\"Dirección: {direccion}\")\n",
-        "    pdf.save()\n",
-        "\n",
-        "# Guarda los datos en Excel como base de datos del proceso.\n",
-        "ruta_excel = \"clientes_simulados.xlsx\"\n",
-        "clientes_df = pd.DataFrame(lista_clientes)\n",
-        "clientes_df.to_excel(ruta_excel, index=False)\n",
-        "print(f\"Se generaron {cantidad_clientes} clientes y sus archivos PDF en la carpeta 'documentos_clientes_wenia'.\")\n",
-        "\n",
-        "#Subida de archivos a S3\n",
-        "nombre_bucket = \"prueba-wenia\"\n",
-        "s3 = boto3.client('s3')\n",
-        "\n",
-        "# Subir archivo Excel Base de datos.\n",
-        "if os.path.exists(ruta_excel):\n",
-        "    try:\n",
-        "        s3.upload_file(ruta_excel, nombre_bucket, os.path.basename(ruta_excel))\n",
-        "        print(f\"Archivo Excel subido correctamente a s3://{nombre_bucket}/{os.path.basename(ruta_excel)}\")\n",
-        "    except Exception as error:\n",
-        "        print(\"Error al subir el archivo Excel:\", error)\n",
-        "\n",
-        "# Subir PDFs generados al bucket\n",
-        "for archivo in os.listdir(\"documentos_clientes_wenia\"):\n",
-        "    ruta_local = os.path.join(\"documentos_clientes_wenia\", archivo)\n",
-        "    if os.path.isfile(ruta_local):\n",
-        "        try:\n",
-        "            s3.upload_file(ruta_local, nombre_bucket, f\"documentos_clientes_wenia/{archivo}\")\n",
-        "            print(f\"Archivo PDF subido a s3://{nombre_bucket}/documentos_clientes_wenia/{archivo}\")\n",
-        "        except Exception as error:\n",
-        "            print(f\"Error al subir el archivo {archivo}:\", error)"
-      ],
-      "metadata": {
-        "colab": {
-          "base_uri": "https://localhost:8080/"
-        },
-        "collapsed": true,
-        "id": "qYvXdsJxUMzB",
-        "outputId": "b2e23410-f639-46fa-f8a4-424483ac883c"
-      },
-      "execution_count": 63,
-      "outputs": [
-        {
-          "output_type": "stream",
-          "name": "stdout",
-          "text": [
-            "Se generaron 40 clientes y sus archivos PDF en la carpeta 'documentos_clientes_wenia'.\n",
-            "Archivo Excel subido correctamente a s3://prueba-wenia/clientes_simulados.xlsx\n",
-            "Archivo PDF subido a s3://prueba-wenia/documentos_clientes_wenia/cliente_wenialover14.pdf\n",
-            "Archivo PDF subido a s3://prueba-wenia/documentos_clientes_wenia/cliente_wenialover44.pdf\n",
-            "Archivo PDF subido a s3://prueba-wenia/documentos_clientes_wenia/cliente_wenialover10.pdf\n",
-            "Archivo PDF subido a s3://prueba-wenia/documentos_clientes_wenia/cliente_wenialover15.pdf\n",
-            "Archivo PDF subido a s3://prueba-wenia/documentos_clientes_wenia/cliente_wenialover16.pdf\n",
-            "Archivo PDF subido a s3://prueba-wenia/documentos_clientes_wenia/cliente_wenialover18.pdf\n",
-            "Archivo PDF subido a s3://prueba-wenia/documentos_clientes_wenia/cliente_wenialover40.pdf\n",
-            "Archivo PDF subido a s3://prueba-wenia/documentos_clientes_wenia/cliente_wenialover17.pdf\n",
-            "Archivo PDF subido a s3://prueba-wenia/documentos_clientes_wenia/cliente_wenialover45.pdf\n",
-            "Archivo PDF subido a s3://prueba-wenia/documentos_clientes_wenia/cliente_wenialover23.pdf\n",
-            "Archivo PDF subido a s3://prueba-wenia/documentos_clientes_wenia/cliente_wenialover6.pdf\n",
-            "Archivo PDF subido a s3://prueba-wenia/documentos_clientes_wenia/cliente_wenialover33.pdf\n",
-            "Archivo PDF subido a s3://prueba-wenia/documentos_clientes_wenia/cliente_wenialover13.pdf\n",
-            "Archivo PDF subido a s3://prueba-wenia/documentos_clientes_wenia/cliente_wenialover32.pdf\n",
-            "Archivo PDF subido a s3://prueba-wenia/documentos_clientes_wenia/cliente_wenialover43.pdf\n",
-            "Archivo PDF subido a s3://prueba-wenia/documentos_clientes_wenia/cliente_wenialover34.pdf\n",
-            "Archivo PDF subido a s3://prueba-wenia/documentos_clientes_wenia/cliente_wenialover47.pdf\n",
-            "Archivo PDF subido a s3://prueba-wenia/documentos_clientes_wenia/cliente_wenialover8.pdf\n",
-            "Archivo PDF subido a s3://prueba-wenia/documentos_clientes_wenia/cliente_wenialover28.pdf\n",
-            "Archivo PDF subido a s3://prueba-wenia/documentos_clientes_wenia/cliente_wenialover3.pdf\n",
-            "Archivo PDF subido a s3://prueba-wenia/documentos_clientes_wenia/cliente_wenialover48.pdf\n",
-            "Archivo PDF subido a s3://prueba-wenia/documentos_clientes_wenia/cliente_wenialover1.pdf\n",
-            "Archivo PDF subido a s3://prueba-wenia/documentos_clientes_wenia/cliente_wenialover22.pdf\n",
-            "Archivo PDF subido a s3://prueba-wenia/documentos_clientes_wenia/cliente_wenialover39.pdf\n",
-            "Archivo PDF subido a s3://prueba-wenia/documentos_clientes_wenia/cliente_wenialover2.pdf\n",
-            "Archivo PDF subido a s3://prueba-wenia/documentos_clientes_wenia/cliente_wenialover12.pdf\n",
-            "Archivo PDF subido a s3://prueba-wenia/documentos_clientes_wenia/cliente_wenialover27.pdf\n",
-            "Archivo PDF subido a s3://prueba-wenia/documentos_clientes_wenia/cliente_wenialover37.pdf\n",
-            "Archivo PDF subido a s3://prueba-wenia/documentos_clientes_wenia/cliente_wenialover19.pdf\n",
-            "Archivo PDF subido a s3://prueba-wenia/documentos_clientes_wenia/cliente_wenialover4.pdf\n",
-            "Archivo PDF subido a s3://prueba-wenia/documentos_clientes_wenia/cliente_wenialover41.pdf\n",
-            "Archivo PDF subido a s3://prueba-wenia/documentos_clientes_wenia/cliente_wenialover30.pdf\n",
-            "Archivo PDF subido a s3://prueba-wenia/documentos_clientes_wenia/cliente_wenialover50.pdf\n",
-            "Archivo PDF subido a s3://prueba-wenia/documentos_clientes_wenia/cliente_wenialover49.pdf\n",
-            "Archivo PDF subido a s3://prueba-wenia/documentos_clientes_wenia/cliente_wenialover26.pdf\n",
-            "Archivo PDF subido a s3://prueba-wenia/documentos_clientes_wenia/cliente_wenialover20.pdf\n",
-            "Archivo PDF subido a s3://prueba-wenia/documentos_clientes_wenia/cliente_wenialover9.pdf\n",
-            "Archivo PDF subido a s3://prueba-wenia/documentos_clientes_wenia/cliente_wenialover42.pdf\n",
-            "Archivo PDF subido a s3://prueba-wenia/documentos_clientes_wenia/cliente_wenialover7.pdf\n",
-            "Archivo PDF subido a s3://prueba-wenia/documentos_clientes_wenia/cliente_wenialover25.pdf\n",
-            "Archivo PDF subido a s3://prueba-wenia/documentos_clientes_wenia/cliente_wenialover24.pdf\n",
-            "Archivo PDF subido a s3://prueba-wenia/documentos_clientes_wenia/cliente_wenialover36.pdf\n",
-            "Archivo PDF subido a s3://prueba-wenia/documentos_clientes_wenia/cliente_wenialover21.pdf\n",
-            "Archivo PDF subido a s3://prueba-wenia/documentos_clientes_wenia/cliente_wenialover11.pdf\n",
-            "Archivo PDF subido a s3://prueba-wenia/documentos_clientes_wenia/cliente_wenialover5.pdf\n",
-            "Archivo PDF subido a s3://prueba-wenia/documentos_clientes_wenia/cliente_wenialover31.pdf\n",
-            "Archivo PDF subido a s3://prueba-wenia/documentos_clientes_wenia/cliente_wenialover29.pdf\n",
-            "Archivo PDF subido a s3://prueba-wenia/documentos_clientes_wenia/cliente_wenialover46.pdf\n",
-            "Archivo PDF subido a s3://prueba-wenia/documentos_clientes_wenia/cliente_wenialover38.pdf\n",
-            "Archivo PDF subido a s3://prueba-wenia/documentos_clientes_wenia/cliente_wenialover35.pdf\n"
-          ]
-        }
-      ]
-    },
-    {
-      "cell_type": "code",
-      "source": [
-        "# Se ingresa la clave de google api para utilizar el servicio.\n",
-        "GOOGLE_API_KEY = input(\"Ingresa tu API key de Google Maps: \")\n",
-        "os.environ[\"GOOGLE_API_KEY\"] = GOOGLE_API_KEY"
-      ],
-      "metadata": {
-        "id": "wOvRoPyITzfd",
-        "collapsed": true
-      },
-      "execution_count": null,
-      "outputs": []
-    },
-    {
-      "cell_type": "code",
-      "source": [
-        "#Configuracion credenciales AWS\n",
-        "AWS_ACCESS_KEY_ID = input(\"Ingresar AWS_ACCESS_KEY_ID: \")\n",
-        "AWS_SECRET_ACCESS_KEY = input(\"Ingresar AWS_SECRET_ACCESS_KEY: \")\n",
-        "AWS_DEFAULT_REGION = \"us-east-2\"  # Region Ohio para el ejercicio.\n",
-        "\n",
-        "os.environ[\"AWS_ACCESS_KEY_ID\"] = AWS_ACCESS_KEY_ID\n",
-        "os.environ[\"AWS_SECRET_ACCESS_KEY\"] = AWS_SECRET_ACCESS_KEY\n",
-        "os.environ[\"AWS_DEFAULT_REGION\"] = AWS_DEFAULT_REGION\n",
-        "\n",
-        "print(\"Credenciales cargadas de forma temporal y segura.\")"
-      ],
-      "metadata": {
-        "id": "ovJrHLAELgja",
-        "collapsed": true
-      },
-      "execution_count": null,
-      "outputs": []
-    },
-    {
-      "cell_type": "code",
-      "source": [
-        "# Función para extraer texto de archivos PDF\n",
-        "def extraer_texto(archivo_bytes, nombre_archivo):\n",
-        "    \"\"\"\n",
-        "    Extrae el texto de un archivo PDF y lo devuelve en mayúsculas.\n",
-        "    Se utiliza para la creación de la base de datos de clientes de Wenia.\n",
-        "    \"\"\"\n",
-        "    nombre_archivo = nombre_archivo.lower()\n",
-        "    if not nombre_archivo.endswith(\".pdf\"):\n",
-        "        raise ValueError(\"El archivo no es un PDF válido.\")\n",
-        "\n",
-        "    with pdfplumber.open(io.BytesIO(archivo_bytes)) as pdf:\n",
-        "        texto = \"\"\n",
-        "        for pagina in pdf.pages:\n",
-        "            texto += pagina.extract_text() or \"\"\n",
-        "    return texto.upper()"
-      ],
-      "metadata": {
-        "id": "YEh82ojQTr5r"
-      },
-      "execution_count": 64,
-      "outputs": []
-    },
-    {
-      "cell_type": "code",
-      "source": [
-        "# Función para generar variantes de una dirección\n",
-        "def generar_variantes(direccion):\n",
-        "    \"\"\"\n",
-        "    Genera distintas versiones de una dirección para mejorar la detección\n",
-        "    y coincidencia en el proceso de geocodificación.\n",
-        "    \"\"\"\n",
-        "    base = direccion.upper().strip()\n",
-        "    variantes = [\n",
-        "        base.replace(\"CRA\", \"KRA\"),\n",
-        "        base.replace(\"CRA\", \"CARRERA\"),\n",
-        "        base.replace(\"#\", \"Nro\"),\n",
-        "        base.replace(\"#\", \"Numero\"),\n",
-        "        base.replace(\"#\", \"Num\"),\n",
-        "        base.replace(\"-\", \" \"),\n",
-        "        base.replace(\"CRA\", \"CALLE\"),\n",
-        "        base.replace(\"CRA\", \"TRANSVERSAL\"),\n",
-        "    ]\n",
-        "    return list(set(variantes))\n"
-      ],
-      "metadata": {
-        "id": "WnPacQSzIaye"
-      },
-      "execution_count": 65,
-      "outputs": []
-    },
-    {
-      "cell_type": "code",
-      "source": [
-        "#Funcion para comparar variantes de texto y medir similitud entre las mismas.\n",
-        "def comparar_variantes(original, variantes, umbral=90):\n",
-        "    \"\"\"\n",
-        "    Compara una dirección original con un conjunto de variantes y calcula\n",
-        "    su nivel de similitud utilizando RapidFuzz.\n",
-        "    Retorna las variantes que superen el umbral definido, en este caso 90.\n",
-        "    \"\"\"\n",
-        "    coincidencias = []\n",
-        "    for v in variantes:\n",
-        "        puntaje = fuzz.ratio(original, v)\n",
-        "        if puntaje >= umbral:\n",
-        "            coincidencias.append((v, puntaje))\n",
-        "    return coincidencias"
-      ],
-      "metadata": {
-        "id": "Q61xaEH3NiB3"
-      },
-      "execution_count": 66,
-      "outputs": []
-    },
-    {
-      "cell_type": "code",
-      "source": [
-        "# Función para obtener coordenadas geográficas de una direccion\n",
-        "gmaps = googlemaps.Client(key=os.getenv(\"GOOGLE_API_KEY\")) #Ok clave ingresada arriba\n",
-        "\n",
-        "def geocodificar_direccion(direccion):\n",
-        "    \"\"\"\n",
-        "    Utiliza la API de Google Maps para convertir una dirección en coordenadas\n",
-        "    geograficas (latitud y longitud).\n",
-        "    Retorna una tupla (lat, lng) o (None, None) si no se puede geocodificar, por\n",
-        "    algun error identificado.\n",
-        "    \"\"\"\n",
-        "    try:\n",
-        "        resultado = gmaps.geocode(direccion + \", Colombia\")\n",
-        "        if not resultado:\n",
-        "            return None, None\n",
-        "        ubicacion = resultado[0]['geometry']['location']\n",
-        "        return ubicacion['lat'], ubicacion['lng']\n",
-        "    except Exception as e:\n",
-        "        print(\"Error al geocodificar la dirección:\", direccion, e)\n",
-        "        return None, None\n",
-        "\n"
-      ],
-      "metadata": {
-        "id": "XbYmY5afN2-n"
-      },
-      "execution_count": 67,
-      "outputs": []
-    },
-    {
-      "cell_type": "code",
-      "source": [
-        "# Función principal para procesar los archivos del bucket y generar el mapa de direcciones\n",
-        "def procesar_archivos_y_generar_mapa(bucket_name=\"prueba-wenia\", umbral_similitud=90):\n",
-        "    # Conexión a S3\n",
-        "    s3 = boto3.client('s3')\n",
-        "\n",
-        "    # Identificar archivos disponibles dentro del bucket de S3\n",
-        "    respuesta = s3.list_objects_v2(Bucket=bucket_name)\n",
-        "    if 'Contents' not in respuesta:\n",
-        "        print(\"No se encontraron archivos en el bucket.\")\n",
-        "        return None\n",
-        "\n",
-        "    filas = []\n",
-        "    archivos_procesados = 0\n",
-        "    direcciones_totales = 0\n",
-        "\n",
-        "    # Recorrer los archivos dentro del bucket\n",
-        "    for obj in respuesta['Contents']:\n",
-        "        clave = obj['Key']\n",
-        "\n",
-        "        # Procesar únicamente archivos PDF\n",
-        "        if not clave.lower().endswith(\".pdf\"):\n",
-        "            continue\n",
-        "\n",
-        "        # Descargar el archivo desde S3 en memoria\n",
-        "        archivo = io.BytesIO()  # archivo en memoria, nada en disco\n",
-        "        s3.download_fileobj(bucket_name, clave, archivo)\n",
-        "        archivo.seek(0)\n",
-        "\n",
-        "        # Extraer texto del PDF\n",
-        "        texto = extract_text(archivo.getvalue(), clave)\n",
-        "\n",
-        "        # Buscar direcciones dentro del texto\n",
-        "        direcciones = find_address(texto)\n",
-        "        if not direcciones:\n",
-        "            continue\n",
-        "\n",
-        "        archivos_procesados += 1\n",
-        "        direcciones_totales += len(direcciones)\n",
-        "\n",
-        "        # Comparar variantes y generar coordenadas para cada dirección\n",
-        "        for direccion in direcciones:\n",
-        "            variantes = generate_variants(direccion)\n",
-        "            coincidencias = compare_variants(direccion, variantes, umbral_similitud)\n",
-        "\n",
-        "            for coincidencia, puntaje in coincidencias:\n",
-        "                lat, lng = geocodificar_direccion(coincidencia)\n",
-        "                if lat and lng:\n",
-        "                    filas.append({\n",
-        "                        \"archivo\": clave,\n",
-        "                        \"direccion_original\": direccion,\n",
-        "                        \"direccion_similar\": coincidencia,\n",
-        "                        \"similitud\": puntaje,\n",
-        "                        \"lat\": lat,\n",
-        "                        \"lng\": lng\n",
-        "                    })\n",
-        "\n",
-        "    # Verificar si se encontraron resultados válidos\n",
-        "    if not filas:\n",
-        "        print(\"No se encontraron direcciones válidas con similitud superior al umbral.\")\n",
-        "        return None\n",
-        "\n",
-        "    # Crear DataFrame con los resultados\n",
-        "    df = pd.DataFrame(filas)\n",
-        "    df.to_excel(\"direcciones_resultado.xlsx\", index=False)\n",
-        "    print(\"Resultados guardados en 'direcciones_resultado.xlsx'\")\n",
-        "\n",
-        "    # Subir el archivo con los resultados al bucket de S3\n",
-        "    s3.upload_file(\"direcciones_resultado.xlsx\", bucket_name, \"direcciones_resultado.xlsx\")\n",
-        "    print(f\"Archivo subido a S3: s3://{bucket_name}/direcciones_resultado.xlsx\")\n",
-        "\n",
-        "    # Generación del mapa con coordenadas obtenidas, dinámico y con clusters\n",
-        "    mapa = folium.Map(location=[df['lat'].mean(), df['lng'].mean()], zoom_start=12)\n",
-        "    marker_cluster = folium.plugins.MarkerCluster().add_to(mapa)\n",
-        "\n",
-        "    for _, fila in df.iterrows():\n",
-        "        # Elegir color según similitud\n",
-        "        if fila['similitud'] >= 90:\n",
-        "            color = 'green'\n",
-        "        elif fila['similitud'] >= 70:\n",
-        "            color = 'orange'\n",
-        "        else:\n",
-        "            color = 'red'\n",
-        "\n",
-        "        # Información del popup\n",
-        "        info_popup = (\n",
-        "            f\"<b>Dirección:</b> {fila['direccion_similar']}<br>\"\n",
-        "            f\"<b>Similitud:</b> {fila['similitud']}%\"\n",
-        "        )\n",
-        "\n",
-        "        folium.Marker(\n",
-        "            location=[fila['lat'], fila['lng']],\n",
-        "            popup=info_popup,\n",
-        "            icon=folium.Icon(color=color)\n",
-        "        ).add_to(marker_cluster)\n",
-        "\n",
-        "    # Guardar el mapa generado en formato HTML\n",
-        "    mapa.save(\"mapa_direcciones.html\")\n",
-        "\n",
-        "    # Mostrar resumen\n",
-        "    print(f\"Se procesaron {archivos_procesados} archivos PDF.\")\n",
-        "    print(f\"Se detectaron {direcciones_totales} direcciones en total.\")\n",
-        "    print(\"Mapa generado y guardado como 'mapa_direcciones.html'\")\n",
-        "\n",
-        "    return df\n"
-      ],
-      "metadata": {
-        "id": "7LY-y51zJs3E"
-      },
-      "execution_count": 78,
-      "outputs": []
-    },
-    {
-      "cell_type": "code",
-      "execution_count": 79,
-      "metadata": {
-        "colab": {
-          "base_uri": "https://localhost:8080/"
-        },
-        "id": "V_qB4egJDiEW",
-        "outputId": "e7e0e610-4113-4a30-d6af-f5f99271ac08"
-      },
-      "outputs": [
-        {
-          "output_type": "stream",
-          "name": "stdout",
-          "text": [
-            "Resultados guardados en 'direcciones_resultado.xlsx'\n",
-            "Archivo subido a S3: s3://prueba-wenia/direcciones_resultado.xlsx\n",
-            "Se procesaron 40 archivos PDF.\n",
-            "Se detectaron 40 direcciones en total.\n",
-            "Mapa generado y guardado como 'mapa_direcciones.html'\n"
-          ]
-        }
-      ],
-      "source": [
-        "# Ejecutar el procesamiento de archivos del bucket y generar el mapa\n",
-        "resultado_df = procesar_archivos_y_generar_mapa(bucket_name=\"prueba-wenia\")"
-      ]
-    },
-    {
-      "cell_type": "code",
-      "source": [
-        "#DataFrame con los resultados\n",
-        "resultado_df.head(12)"
-      ],
-      "metadata": {
-        "colab": {
-          "base_uri": "https://localhost:8080/",
-          "height": 426
-        },
-        "id": "Gp6VY8qEamDY",
-        "outputId": "2cdedb5b-1b02-4501-8f40-b05256275e77"
-      },
-      "execution_count": 80,
-      "outputs": [
-        {
-          "output_type": "execute_result",
-          "data": {
-            "text/plain": [
-              "                                              archivo  \\\n",
-              "0   documentos_clientes_wenia/cliente_wenialover1.pdf   \n",
-              "1   documentos_clientes_wenia/cliente_wenialover1.pdf   \n",
-              "2   documentos_clientes_wenia/cliente_wenialover11...   \n",
-              "3   documentos_clientes_wenia/cliente_wenialover11...   \n",
-              "4   documentos_clientes_wenia/cliente_wenialover12...   \n",
-              "5   documentos_clientes_wenia/cliente_wenialover12...   \n",
-              "6   documentos_clientes_wenia/cliente_wenialover13...   \n",
-              "7   documentos_clientes_wenia/cliente_wenialover13...   \n",
-              "8   documentos_clientes_wenia/cliente_wenialover14...   \n",
-              "9   documentos_clientes_wenia/cliente_wenialover14...   \n",
-              "10  documentos_clientes_wenia/cliente_wenialover16...   \n",
-              "11  documentos_clientes_wenia/cliente_wenialover16...   \n",
-              "\n",
-              "          direccion_original           direccion_similar   similitud  \\\n",
-              "0         CALLE 10 # 33 - 23          CALLE 10 # 33 - 23  100.000000   \n",
-              "1         CALLE 10 # 33 - 23          CALLE 10 # 33   23   94.444444   \n",
-              "2           CRA 75 # 24 - 77            CRA 75 # 24   77   93.750000   \n",
-              "3           CRA 75 # 24 - 77            KRA 75 # 24 - 77   93.750000   \n",
-              "4            KRA 6 # 87 - 89             KRA 6 # 87 - 89  100.000000   \n",
-              "5            KRA 6 # 87 - 89             KRA 6 # 87   89   93.333333   \n",
-              "6           CRA 31 # 88 - 40            KRA 31 # 88 - 40   93.750000   \n",
-              "7           CRA 31 # 88 - 40            CRA 31 # 88   40   93.750000   \n",
-              "8           KRA 38 # 12 - 81            KRA 38 # 12 - 81  100.000000   \n",
-              "9           KRA 38 # 12 - 81            KRA 38 # 12   81   93.750000   \n",
-              "10  TRANSVERSAL 13 # 36 - 38    TRANSVERSAL 13 # 36   38   95.833333   \n",
-              "11  TRANSVERSAL 13 # 36 - 38  TRANSVERSAL 13 Num 36 - 38   92.000000   \n",
-              "\n",
-              "          lat        lng  \n",
-              "0    6.208287 -75.564831  \n",
-              "1    6.208287 -75.564831  \n",
-              "2    4.664866 -74.121438  \n",
-              "3    4.570868 -74.297333  \n",
-              "4    4.570868 -74.297333  \n",
-              "5    4.570868 -74.297333  \n",
-              "6    4.570868 -74.297333  \n",
-              "7   10.976440 -74.795962  \n",
-              "8    4.570868 -74.297333  \n",
-              "9    4.570868 -74.297333  \n",
-              "10   7.081136 -73.117663  \n",
-              "11   8.937050 -75.443043  "
-            ],
-            "text/html": [
-              "\n",
-              "  <div id=\"df-5b438530-e9af-47dd-becc-87d0418ade01\" class=\"colab-df-container\">\n",
-              "    <div>\n",
-              "<style scoped>\n",
-              "    .dataframe tbody tr th:only-of-type {\n",
-              "        vertical-align: middle;\n",
-              "    }\n",
-              "\n",
-              "    .dataframe tbody tr th {\n",
-              "        vertical-align: top;\n",
-              "    }\n",
-              "\n",
-              "    .dataframe thead th {\n",
-              "        text-align: right;\n",
-              "    }\n",
-              "</style>\n",
-              "<table border=\"1\" class=\"dataframe\">\n",
-              "  <thead>\n",
-              "    <tr style=\"text-align: right;\">\n",
-              "      <th></th>\n",
-              "      <th>archivo</th>\n",
-              "      <th>direccion_original</th>\n",
-              "      <th>direccion_similar</th>\n",
-              "      <th>similitud</th>\n",
-              "      <th>lat</th>\n",
-              "      <th>lng</th>\n",
-              "    </tr>\n",
-              "  </thead>\n",
-              "  <tbody>\n",
-              "    <tr>\n",
-              "      <th>0</th>\n",
-              "      <td>documentos_clientes_wenia/cliente_wenialover1.pdf</td>\n",
-              "      <td>CALLE 10 # 33 - 23</td>\n",
-              "      <td>CALLE 10 # 33 - 23</td>\n",
-              "      <td>100.000000</td>\n",
-              "      <td>6.208287</td>\n",
-              "      <td>-75.564831</td>\n",
-              "    </tr>\n",
-              "    <tr>\n",
-              "      <th>1</th>\n",
-              "      <td>documentos_clientes_wenia/cliente_wenialover1.pdf</td>\n",
-              "      <td>CALLE 10 # 33 - 23</td>\n",
-              "      <td>CALLE 10 # 33   23</td>\n",
-              "      <td>94.444444</td>\n",
-              "      <td>6.208287</td>\n",
-              "      <td>-75.564831</td>\n",
-              "    </tr>\n",
-              "    <tr>\n",
-              "      <th>2</th>\n",
-              "      <td>documentos_clientes_wenia/cliente_wenialover11...</td>\n",
-              "      <td>CRA 75 # 24 - 77</td>\n",
-              "      <td>CRA 75 # 24   77</td>\n",
-              "      <td>93.750000</td>\n",
-              "      <td>4.664866</td>\n",
-              "      <td>-74.121438</td>\n",
-              "    </tr>\n",
-              "    <tr>\n",
-              "      <th>3</th>\n",
-              "      <td>documentos_clientes_wenia/cliente_wenialover11...</td>\n",
-              "      <td>CRA 75 # 24 - 77</td>\n",
-              "      <td>KRA 75 # 24 - 77</td>\n",
-              "      <td>93.750000</td>\n",
-              "      <td>4.570868</td>\n",
-              "      <td>-74.297333</td>\n",
-              "    </tr>\n",
-              "    <tr>\n",
-              "      <th>4</th>\n",
-              "      <td>documentos_clientes_wenia/cliente_wenialover12...</td>\n",
-              "      <td>KRA 6 # 87 - 89</td>\n",
-              "      <td>KRA 6 # 87 - 89</td>\n",
-              "      <td>100.000000</td>\n",
-              "      <td>4.570868</td>\n",
-              "      <td>-74.297333</td>\n",
-              "    </tr>\n",
-              "    <tr>\n",
-              "      <th>5</th>\n",
-              "      <td>documentos_clientes_wenia/cliente_wenialover12...</td>\n",
-              "      <td>KRA 6 # 87 - 89</td>\n",
-              "      <td>KRA 6 # 87   89</td>\n",
-              "      <td>93.333333</td>\n",
-              "      <td>4.570868</td>\n",
-              "      <td>-74.297333</td>\n",
-              "    </tr>\n",
-              "    <tr>\n",
-              "      <th>6</th>\n",
-              "      <td>documentos_clientes_wenia/cliente_wenialover13...</td>\n",
-              "      <td>CRA 31 # 88 - 40</td>\n",
-              "      <td>KRA 31 # 88 - 40</td>\n",
-              "      <td>93.750000</td>\n",
-              "      <td>4.570868</td>\n",
-              "      <td>-74.297333</td>\n",
-              "    </tr>\n",
-              "    <tr>\n",
-              "      <th>7</th>\n",
-              "      <td>documentos_clientes_wenia/cliente_wenialover13...</td>\n",
-              "      <td>CRA 31 # 88 - 40</td>\n",
-              "      <td>CRA 31 # 88   40</td>\n",
-              "      <td>93.750000</td>\n",
-              "      <td>10.976440</td>\n",
-              "      <td>-74.795962</td>\n",
-              "    </tr>\n",
-              "    <tr>\n",
-              "      <th>8</th>\n",
-              "      <td>documentos_clientes_wenia/cliente_wenialover14...</td>\n",
-              "      <td>KRA 38 # 12 - 81</td>\n",
-              "      <td>KRA 38 # 12 - 81</td>\n",
-              "      <td>100.000000</td>\n",
-              "      <td>4.570868</td>\n",
-              "      <td>-74.297333</td>\n",
-              "    </tr>\n",
-              "    <tr>\n",
-              "      <th>9</th>\n",
-              "      <td>documentos_clientes_wenia/cliente_wenialover14...</td>\n",
-              "      <td>KRA 38 # 12 - 81</td>\n",
-              "      <td>KRA 38 # 12   81</td>\n",
-              "      <td>93.750000</td>\n",
-              "      <td>4.570868</td>\n",
-              "      <td>-74.297333</td>\n",
-              "    </tr>\n",
-              "    <tr>\n",
-              "      <th>10</th>\n",
-              "      <td>documentos_clientes_wenia/cliente_wenialover16...</td>\n",
-              "      <td>TRANSVERSAL 13 # 36 - 38</td>\n",
-              "      <td>TRANSVERSAL 13 # 36   38</td>\n",
-              "      <td>95.833333</td>\n",
-              "      <td>7.081136</td>\n",
-              "      <td>-73.117663</td>\n",
-              "    </tr>\n",
-              "    <tr>\n",
-              "      <th>11</th>\n",
-              "      <td>documentos_clientes_wenia/cliente_wenialover16...</td>\n",
-              "      <td>TRANSVERSAL 13 # 36 - 38</td>\n",
-              "      <td>TRANSVERSAL 13 Num 36 - 38</td>\n",
-              "      <td>92.000000</td>\n",
-              "      <td>8.937050</td>\n",
-              "      <td>-75.443043</td>\n",
-              "    </tr>\n",
-              "  </tbody>\n",
-              "</table>\n",
-              "</div>\n",
-              "    <div class=\"colab-df-buttons\">\n",
-              "\n",
-              "  <div class=\"colab-df-container\">\n",
-              "    <button class=\"colab-df-convert\" onclick=\"convertToInteractive('df-5b438530-e9af-47dd-becc-87d0418ade01')\"\n",
-              "            title=\"Convert this dataframe to an interactive table.\"\n",
-              "            style=\"display:none;\">\n",
-              "\n",
-              "  <svg xmlns=\"http://www.w3.org/2000/svg\" height=\"24px\" viewBox=\"0 -960 960 960\">\n",
-              "    <path d=\"M120-120v-720h720v720H120Zm60-500h600v-160H180v160Zm220 220h160v-160H400v160Zm0 220h160v-160H400v160ZM180-400h160v-160H180v160Zm440 0h160v-160H620v160ZM180-180h160v-160H180v160Zm440 0h160v-160H620v160Z\"/>\n",
-              "  </svg>\n",
-              "    </button>\n",
-              "\n",
-              "  <style>\n",
-              "    .colab-df-container {\n",
-              "      display:flex;\n",
-              "      gap: 12px;\n",
-              "    }\n",
-              "\n",
-              "    .colab-df-convert {\n",
-              "      background-color: #E8F0FE;\n",
-              "      border: none;\n",
-              "      border-radius: 50%;\n",
-              "      cursor: pointer;\n",
-              "      display: none;\n",
-              "      fill: #1967D2;\n",
-              "      height: 32px;\n",
-              "      padding: 0 0 0 0;\n",
-              "      width: 32px;\n",
-              "    }\n",
-              "\n",
-              "    .colab-df-convert:hover {\n",
-              "      background-color: #E2EBFA;\n",
-              "      box-shadow: 0px 1px 2px rgba(60, 64, 67, 0.3), 0px 1px 3px 1px rgba(60, 64, 67, 0.15);\n",
-              "      fill: #174EA6;\n",
-              "    }\n",
-              "\n",
-              "    .colab-df-buttons div {\n",
-              "      margin-bottom: 4px;\n",
-              "    }\n",
-              "\n",
-              "    [theme=dark] .colab-df-convert {\n",
-              "      background-color: #3B4455;\n",
-              "      fill: #D2E3FC;\n",
-              "    }\n",
-              "\n",
-              "    [theme=dark] .colab-df-convert:hover {\n",
-              "      background-color: #434B5C;\n",
-              "      box-shadow: 0px 1px 3px 1px rgba(0, 0, 0, 0.15);\n",
-              "      filter: drop-shadow(0px 1px 2px rgba(0, 0, 0, 0.3));\n",
-              "      fill: #FFFFFF;\n",
-              "    }\n",
-              "  </style>\n",
-              "\n",
-              "    <script>\n",
-              "      const buttonEl =\n",
-              "        document.querySelector('#df-5b438530-e9af-47dd-becc-87d0418ade01 button.colab-df-convert');\n",
-              "      buttonEl.style.display =\n",
-              "        google.colab.kernel.accessAllowed ? 'block' : 'none';\n",
-              "\n",
-              "      async function convertToInteractive(key) {\n",
-              "        const element = document.querySelector('#df-5b438530-e9af-47dd-becc-87d0418ade01');\n",
-              "        const dataTable =\n",
-              "          await google.colab.kernel.invokeFunction('convertToInteractive',\n",
-              "                                                    [key], {});\n",
-              "        if (!dataTable) return;\n",
-              "\n",
-              "        const docLinkHtml = 'Like what you see? Visit the ' +\n",
-              "          '<a target=\"_blank\" href=https://colab.research.google.com/notebooks/data_table.ipynb>data table notebook</a>'\n",
-              "          + ' to learn more about interactive tables.';\n",
-              "        element.innerHTML = '';\n",
-              "        dataTable['output_type'] = 'display_data';\n",
-              "        await google.colab.output.renderOutput(dataTable, element);\n",
-              "        const docLink = document.createElement('div');\n",
-              "        docLink.innerHTML = docLinkHtml;\n",
-              "        element.appendChild(docLink);\n",
-              "      }\n",
-              "    </script>\n",
-              "  </div>\n",
-              "\n",
-              "\n",
-              "    <div id=\"df-607bbc96-a6db-4844-9adf-aebe9bb48e52\">\n",
-              "      <button class=\"colab-df-quickchart\" onclick=\"quickchart('df-607bbc96-a6db-4844-9adf-aebe9bb48e52')\"\n",
-              "                title=\"Suggest charts\"\n",
-              "                style=\"display:none;\">\n",
-              "\n",
-              "<svg xmlns=\"http://www.w3.org/2000/svg\" height=\"24px\"viewBox=\"0 0 24 24\"\n",
-              "     width=\"24px\">\n",
-              "    <g>\n",
-              "        <path d=\"M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z\"/>\n",
-              "    </g>\n",
-              "</svg>\n",
-              "      </button>\n",
-              "\n",
-              "<style>\n",
-              "  .colab-df-quickchart {\n",
-              "      --bg-color: #E8F0FE;\n",
-              "      --fill-color: #1967D2;\n",
-              "      --hover-bg-color: #E2EBFA;\n",
-              "      --hover-fill-color: #174EA6;\n",
-              "      --disabled-fill-color: #AAA;\n",
-              "      --disabled-bg-color: #DDD;\n",
-              "  }\n",
-              "\n",
-              "  [theme=dark] .colab-df-quickchart {\n",
-              "      --bg-color: #3B4455;\n",
-              "      --fill-color: #D2E3FC;\n",
-              "      --hover-bg-color: #434B5C;\n",
-              "      --hover-fill-color: #FFFFFF;\n",
-              "      --disabled-bg-color: #3B4455;\n",
-              "      --disabled-fill-color: #666;\n",
-              "  }\n",
-              "\n",
-              "  .colab-df-quickchart {\n",
-              "    background-color: var(--bg-color);\n",
-              "    border: none;\n",
-              "    border-radius: 50%;\n",
-              "    cursor: pointer;\n",
-              "    display: none;\n",
-              "    fill: var(--fill-color);\n",
-              "    height: 32px;\n",
-              "    padding: 0;\n",
-              "    width: 32px;\n",
-              "  }\n",
-              "\n",
-              "  .colab-df-quickchart:hover {\n",
-              "    background-color: var(--hover-bg-color);\n",
-              "    box-shadow: 0 1px 2px rgba(60, 64, 67, 0.3), 0 1px 3px 1px rgba(60, 64, 67, 0.15);\n",
-              "    fill: var(--button-hover-fill-color);\n",
-              "  }\n",
-              "\n",
-              "  .colab-df-quickchart-complete:disabled,\n",
-              "  .colab-df-quickchart-complete:disabled:hover {\n",
-              "    background-color: var(--disabled-bg-color);\n",
-              "    fill: var(--disabled-fill-color);\n",
-              "    box-shadow: none;\n",
-              "  }\n",
-              "\n",
-              "  .colab-df-spinner {\n",
-              "    border: 2px solid var(--fill-color);\n",
-              "    border-color: transparent;\n",
-              "    border-bottom-color: var(--fill-color);\n",
-              "    animation:\n",
-              "      spin 1s steps(1) infinite;\n",
-              "  }\n",
-              "\n",
-              "  @keyframes spin {\n",
-              "    0% {\n",
-              "      border-color: transparent;\n",
-              "      border-bottom-color: var(--fill-color);\n",
-              "      border-left-color: var(--fill-color);\n",
-              "    }\n",
-              "    20% {\n",
-              "      border-color: transparent;\n",
-              "      border-left-color: var(--fill-color);\n",
-              "      border-top-color: var(--fill-color);\n",
-              "    }\n",
-              "    30% {\n",
-              "      border-color: transparent;\n",
-              "      border-left-color: var(--fill-color);\n",
-              "      border-top-color: var(--fill-color);\n",
-              "      border-right-color: var(--fill-color);\n",
-              "    }\n",
-              "    40% {\n",
-              "      border-color: transparent;\n",
-              "      border-right-color: var(--fill-color);\n",
-              "      border-top-color: var(--fill-color);\n",
-              "    }\n",
-              "    60% {\n",
-              "      border-color: transparent;\n",
-              "      border-right-color: var(--fill-color);\n",
-              "    }\n",
-              "    80% {\n",
-              "      border-color: transparent;\n",
-              "      border-right-color: var(--fill-color);\n",
-              "      border-bottom-color: var(--fill-color);\n",
-              "    }\n",
-              "    90% {\n",
-              "      border-color: transparent;\n",
-              "      border-bottom-color: var(--fill-color);\n",
-              "    }\n",
-              "  }\n",
-              "</style>\n",
-              "\n",
-              "      <script>\n",
-              "        async function quickchart(key) {\n",
-              "          const quickchartButtonEl =\n",
-              "            document.querySelector('#' + key + ' button');\n",
-              "          quickchartButtonEl.disabled = true;  // To prevent multiple clicks.\n",
-              "          quickchartButtonEl.classList.add('colab-df-spinner');\n",
-              "          try {\n",
-              "            const charts = await google.colab.kernel.invokeFunction(\n",
-              "                'suggestCharts', [key], {});\n",
-              "          } catch (error) {\n",
-              "            console.error('Error during call to suggestCharts:', error);\n",
-              "          }\n",
-              "          quickchartButtonEl.classList.remove('colab-df-spinner');\n",
-              "          quickchartButtonEl.classList.add('colab-df-quickchart-complete');\n",
-              "        }\n",
-              "        (() => {\n",
-              "          let quickchartButtonEl =\n",
-              "            document.querySelector('#df-607bbc96-a6db-4844-9adf-aebe9bb48e52 button');\n",
-              "          quickchartButtonEl.style.display =\n",
-              "            google.colab.kernel.accessAllowed ? 'block' : 'none';\n",
-              "        })();\n",
-              "      </script>\n",
-              "    </div>\n",
-              "\n",
-              "    </div>\n",
-              "  </div>\n"
-            ],
-            "application/vnd.google.colaboratory.intrinsic+json": {
-              "type": "dataframe",
-              "variable_name": "resultado_df",
-              "summary": "{\n  \"name\": \"resultado_df\",\n  \"rows\": 100,\n  \"fields\": [\n    {\n      \"column\": \"archivo\",\n      \"properties\": {\n        \"dtype\": \"category\",\n        \"num_unique_values\": 40,\n        \"samples\": [\n          \"documentos_clientes_wenia/cliente_wenialover33.pdf\",\n          \"documentos_clientes_wenia/cliente_wenialover29.pdf\",\n          \"documentos_clientes_wenia/cliente_wenialover28.pdf\"\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"direccion_original\",\n      \"properties\": {\n        \"dtype\": \"category\",\n        \"num_unique_values\": 40,\n        \"samples\": [\n          \"CRA 22 # 75 - 50\",\n          \"CALLE 78 # 75 - 67\",\n          \"KRA 57 # 19 - 60\"\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"direccion_similar\",\n      \"properties\": {\n        \"dtype\": \"string\",\n        \"num_unique_values\": 100,\n        \"samples\": [\n          \"KRA 80 # 74 - 44\",\n          \"TRANSVERSAL 53 # 83   90\",\n          \"TRANSVERSAL 77 Nro 6 - 17\"\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"similitud\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 3.147318700607342,\n        \"min\": 91.66666666666666,\n        \"max\": 100.0,\n        \"num_unique_values\": 10,\n        \"samples\": [\n          94.11764705882352,\n          94.44444444444444,\n          92.0\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"lat\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 2.487084431541307,\n        \"min\": 3.544099,\n        \"max\": 11.019022,\n        \"num_unique_values\": 36,\n        \"samples\": [\n          4.6997227,\n          6.282706,\n          4.663191299999999\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"lng\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 0.7594706693952552,\n        \"min\": -76.99130799999999,\n        \"max\": -73.1125539,\n        \"num_unique_values\": 36,\n        \"samples\": [\n          -74.11529639999999,\n          -75.594651,\n          -74.0655475\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    }\n  ]\n}"
-            }
-          },
-          "metadata": {},
-          "execution_count": 80
-        }
-      ]
-    }
-  ]
-}
+# -*- coding: utf-8 -*-
+"""
+Script de prueba técnica - Wenia
+Autor: Corinne Hernández
+
+Genera direcciones simuladas de clientes, extrae texto desde PDFs almacenados en S3,
+procesa direcciones mediante OCR y geocodificación en Google Maps, 
+y genera un mapa interactivo con los resultados.
+"""
+
+#%%Importar librerias necesarias
+import os
+import io
+import re
+import random
+import boto3
+import pandas as pd
+from faker import Faker
+import pdfplumber
+import pytesseract
+from rapidfuzz import fuzz
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import letter
+import googlemaps
+import folium
+from folium.plugins import MarkerCluster
+from unidecode import unidecode
+
+#%%Configuracion credenciales AWS
+AWS_ACCESS_KEY_ID = input("ATENCIÓN! Ingresa tu AWS_ACCESS_KEY_ID🔑: ")
+AWS_SECRET_ACCESS_KEY = input("ATENCIÓN! Ingresa tu AWS_SECRET_ACCESS_KEY🕵️: ")
+AWS_DEFAULT_REGION = "us-east-2"  # Region Ohio para el ejercicio.
+
+os.environ["AWS_ACCESS_KEY_ID"] = AWS_ACCESS_KEY_ID
+os.environ["AWS_SECRET_ACCESS_KEY"] = AWS_SECRET_ACCESS_KEY
+os.environ["AWS_DEFAULT_REGION"] = AWS_DEFAULT_REGION
+
+print("Credenciales cargadas de forma temporal y segura.")
+
+#%% Se ingresa la clave de google api para utilizar el servicio.
+GOOGLE_API_KEY = input("ATENCIÓN! Ingresa tu API key de Google Maps 🗺️:  ")
+os.environ["GOOGLE_API_KEY"] = GOOGLE_API_KEY
+
+#%%% Configuración de Faker, para generar dircciones falsas pero realistas
+generador = Faker("es_CO")
+os.makedirs("documentos_clientes_wenia", exist_ok=True)
+
+def crear_direccion():
+    tipos_via = ["CRA", "KRA", "CALLE", "AV", "TRANSVERSAL"]
+    return f"{random.choice(tipos_via)} {random.randint(1,99)} # {random.randint(1,99)} - {random.randint(1,99)}"
+
+cantidad_clientes = 40
+lista_clientes = []
+N_BOGOTA = 12
+
+for i in range(cantidad_clientes):
+    nombre = generador.name()
+
+    # Las primeras N direcciones serán de Bogotá, el resto aleatorias
+    if i < N_BOGOTA:
+        ciudad = "Bogotá"
+    else:
+        ciudad = generador.city()
+
+    direccion = f"{crear_direccion()}, {ciudad}"
+    correo = generador.email()
+
+    lista_clientes.append({
+        "id_cliente": i + 1,
+        "nombre": nombre,
+        "direccion": direccion,
+        "correo": correo,
+    })
+
+    # Generar PDF individual
+    ruta_pdf = f"documentos_clientes_wenia/cliente_wenialover{i+1}.pdf"
+    pdf = canvas.Canvas(ruta_pdf, pagesize=letter)
+    pdf.drawString(100, 750, f"Registro del cliente {nombre}")
+    pdf.drawString(100, 710, f"Correo: {correo}")
+    pdf.drawString(100, 670, f"Dirección: {direccion}")
+    pdf.save()
+
+# Guardar base de datos simulada
+
+clientes_df = pd.DataFrame(lista_clientes)
+ruta_excel = "clientes_simulados.xlsx"
+clientes_df.to_excel(ruta_excel, index=False)
+print(f"Generados {cantidad_clientes} clientes y sus PDFs.")
+
+# Subir archivos a S3
+
+nombre_bucket = "prueba-wenia"
+s3 = boto3.client("s3")
+
+# Verificar si el bucket existe; si no, crearlo directamente en s3
+try:
+    s3.head_bucket(Bucket=nombre_bucket)
+    print(f"El bucket '{nombre_bucket}' ya existe.")
+except s3.exceptions.ClientError as e:
+    error_code = e.response["Error"]["Code"]
+    if error_code == "404":
+        print(f"El bucket '{nombre_bucket}' no existe. Creándolo...")
+        s3.create_bucket(
+            Bucket=nombre_bucket,
+            CreateBucketConfiguration={"LocationConstraint": AWS_DEFAULT_REGION}
+        )
+        print(f"Bucket '{nombre_bucket}' creado exitosamente.")
+    else:
+        raise e  # Si el error no es "no existe", se lanza para no ocultar otros problemas
+
+# Subir Excel
+try:
+    s3.upload_file(ruta_excel, nombre_bucket, os.path.basename(ruta_excel))
+    print(f"Subido a s3://{nombre_bucket}/{os.path.basename(ruta_excel)}")
+except Exception as e:
+    print("Error subiendo Excel:", e)
+
+# Subir PDFs
+for archivo in os.listdir("documentos_clientes_wenia"):
+    ruta_local = os.path.join("documentos_clientes_wenia", archivo)
+    if os.path.isfile(ruta_local):
+        try:
+            s3.upload_file(ruta_local, nombre_bucket, f"documentos_clientes_wenia/{archivo}")
+        except Exception as e:
+            print(f"Error subiendo {archivo}:", e)
+
+print("Todos los PDFs fueron subidos a S3 correctamente, finaliza creación datos y cargue")
+
+
+#%% En esta sección se definen las funciones utilizadas para:
+# - Limpieza y estandarización de direcciones.
+# - Generación de variantes para comparación de similitud.
+# - Evaluación de similitud entre direcciones con RapidFuzz.
+# - Geocodificación de direcciones usando la API de Google Maps.
+
+#Función para extraer texto de archivos PDF
+def extraer_texto(archivo_bytes, nombre_archivo):
+    """Extrae el texto de un archivo PDF; si extract_text falla, aplica OCR por página."""
+    nombre_archivo = nombre_archivo.lower()
+    if not nombre_archivo.endswith(".pdf"):
+        raise ValueError("El archivo no es un PDF válido.")
+
+    texto_total = ""
+    with pdfplumber.open(io.BytesIO(archivo_bytes)) as pdf:
+        for pagina in pdf.pages:
+            # Intento nativo de extracción
+            texto_pagina = pagina.extract_text() or ""
+            if texto_pagina.strip():
+                texto_total += texto_pagina + "\n"
+                continue
+
+            # Si no hay texto, tomo la página como imagen y aplico OCR
+            try:
+                im = pagina.to_image(resolution=300).original  # PIL Image
+                texto_ocr = pytesseract.image_to_string(im, lang="spa")
+                texto_total += texto_ocr + "\n"
+            except Exception as e:
+                # Si falla OCR, continuar y reportar
+                print(f"Warning: OCR falló en {nombre_archivo} página {pagina.page_number}: {e}")
+                continue
+
+    return unidecode(texto_total).upper()
+
+#Funcion para limpieza de la dirección y estandarizar una dirección que ya fue identificada
+def limpiar_direccion(direccion):
+    """
+    Limpia y estandariza una dirección eliminando tildes,
+    símbolos innecesarios y espacios múltiples.
+    """
+    direccion = unidecode(direccion.upper().strip())  # elimina tildes y pone en MAYUS
+    direccion = re.sub(r'[.#]', '', direccion)        # quita puntos y #
+    direccion = re.sub(r'\s+', ' ', direccion)        # reemplaza espacios múltiples
+    return direccion
+
+#Funcion para  buscar dentro de un texto completo (pdf )la línea que contiene la dirección
+def buscar_direccion(texto: str) -> list:
+    """
+    Busca el texto de la dirección que sigue a 'DIRECCION:' o 'DIRECCIÓN:' y lo devuelve
+    limpio y estandarizado.
+    """
+    # Asegurar texto en mayúsculas y sin tildes
+    texto = unidecode(texto.upper())  # <-- requiere importar unidecode
+
+    # Patrón que busca tanto DIRECCION como DIRECCIÓN
+    patron_especifico = r"DIRECCION:\s*(.*)"
+
+    match = re.search(patron_especifico, texto)
+    if match:
+        direccion_encontrada = match.group(1).strip()
+        direccion_limpia = limpiar_direccion(direccion_encontrada)
+        return [direccion_limpia]
+    return []
+
+# Función crear diferentes versiones equivalentes de una misma dirección, para luego compararlas 
+def generar_variantes(direccion):
+    """
+    Genera distintas versiones de una dirección, asegurando que estén limpias
+    y listas para la comparación de similitud.
+    """
+    base = direccion.upper().strip()
+
+    variantes = [
+        # Las variantes deben estar limpias para igualar la 'base limpia' en la comparación
+        limpiar_direccion(base), # Version base, limpia y sin dobles espacios
+        limpiar_direccion(base.replace("CRA", "KRA")),
+        limpiar_direccion(base.replace("CRA", "CARRERA")),
+        limpiar_direccion(base.replace("#", "Nro")),
+        limpiar_direccion(base.replace("-", " ")),
+    ]
+
+    #  set para eliminar duplicados
+    return list(set(variantes))
+
+#Funcion para comparar variantes de texto y medir similitud entre las mismas.
+def comparar_variantes(original, variantes, umbral=90):
+    """
+    Compara una dirección original con un conjunto de variantes y calcula
+    su nivel de similitud utilizando RapidFuzz.
+    Retorna las variantes que superen el umbral definido, en este caso 90.
+    """
+    coincidencias = []
+    for v in variantes:
+        puntaje = fuzz.ratio(original, v)
+        if puntaje >= umbral:
+            coincidencias.append((v, puntaje))
+    return coincidencias
+
+#Función para conecta con la API de Google Maps y convierte una dirección de texto (latitud y longitud)
+gmaps = googlemaps.Client(key=os.getenv("GOOGLE_API_KEY")) #Ok clave ingresada arriba
+
+def geocodificar_direccion(direccion, ciudad="BOGOTA"):
+    """
+    Usa la API de Google Maps para convertir una dirección en coordenadas geográficas.
+    Todas las direcciones se restringen a la ciudad especificada
+    """
+    try:
+        # Limitar el ámbito de búsqueda a la ciudad y a Colombia
+        consulta = f"{direccion}, {ciudad}, Colombia"
+        resultado = gmaps.geocode(consulta)
+
+        if not resultado:
+            return None, None
+
+        ubicacion = resultado[0]['geometry']['location']
+        return ubicacion['lat'], ubicacion['lng']
+
+    except Exception as e:
+        print("Error al geocodificar la dirección:", direccion, e)
+        return None, None
+
+#Funcion para listar todos los objetos (paginación)
+def listar_todos_objetos_s3(s3_client, bucket_name, prefix=None):
+    objetos = []
+    paginator = s3_client.get_paginator('list_objects_v2')
+    page_iterator = paginator.paginate(Bucket=bucket_name, Prefix=prefix or "")
+    for page in page_iterator:
+        if "Contents" in page:
+            objetos.extend(page["Contents"])
+    return objetos
+
+# Función principal para procesar los archivos del bucket y generar el mapa de direcciones
+def procesar_archivos_y_generar_mapa(bucket_name="prueba-wenia", ciudad="BOGOTA", umbral_similitud=90):
+    """
+    Procesa archivos PDF de un bucket S3, extrae direcciones y genera un mapa.
+
+    Pasos principales:
+    1. Descarga PDFs desde S3 y extrae direcciones mediante OCR.
+    2. Filtra direcciones por ciudad (por defecto: BOGOTA).
+    3. Calcula similitud entre variantes de dirección.
+    4. Geocodifica direcciones válidas y genera un mapa con Folium.
+    5. Guarda resultados en un archivo Excel y un mapa HTML, y los sube al bucket.
+
+    Parámetros:
+        bucket_name (str): Nombre del bucket S3 origen y destino.
+        ciudad (str): Ciudad objetivo para filtrar direcciones.
+        umbral_similitud (float): Valor mínimo de similitud para considerar coincidencias.
+
+    Retorna:
+        pd.DataFrame: DataFrame con columnas [archivo, direccion_original, ciudad_original,
+        direccion_similar, similitud, lat, lng].
+    """
+    s3 = boto3.client("s3")
+    respuesta = listar_todos_objetos_s3(s3, bucket_name)
+
+    if not respuesta:
+        print("No se encontraron archivos en el bucket.")
+        return None
+
+    filas = []  
+
+    for obj in respuesta:
+        clave = obj["Key"]
+
+        # Filtrar solo archivos PDF
+        if not clave.lower().endswith(".pdf"):
+            continue
+
+        # Descargar el archivo desde S3 en memoria
+        archivo = io.BytesIO()
+        s3.download_fileobj(bucket_name, clave, archivo)
+        archivo.seek(0)
+
+        # Extraer texto del PDF
+        texto = extraer_texto(archivo.getvalue(), clave)
+        direcciones = buscar_direccion(texto)
+        if not direcciones:
+            continue
+
+        # Filtro y geocodificación
+        for direccion in direcciones:
+            direccion_limpia = limpiar_direccion(direccion)  # aqui se hace unidecode + upper
+
+            if ',' in direccion_limpia:
+                partes = direccion_limpia.rsplit(',', 1)
+                direccion_sin_ciudad = partes[0].strip()
+                ciudad_original = partes[1].strip()
+            else:
+                direccion_sin_ciudad = direccion_limpia
+                ciudad_original = ""
+
+            ciudad_objetivo_norm = unidecode(ciudad).upper()
+
+            # Asegurar comparación en mayúsculas
+            if not ciudad_original:
+                ciudad_original = ciudad_objetivo_norm
+            elif ciudad_objetivo_norm not in ciudad_original.upper():
+                continue
+
+            direccion_para_geo = f"{direccion_sin_ciudad}, {ciudad_objetivo_norm}"
+
+            variantes = generar_variantes(direccion_para_geo)
+            coincidencias = comparar_variantes(direccion_para_geo, variantes, umbral_similitud)
+
+            for coincidencia, puntaje in coincidencias:
+                # Manejo de errores en geocodificación
+                try:
+                    lat, lng = geocodificar_direccion(coincidencia, ciudad=ciudad_objetivo_norm)
+                except Exception as e:
+                    print(f"Error al geocodificar {coincidencia}: {e}")
+                    lat, lng = None, None
+
+                if lat is not None and lng is not None:
+                    filas.append({
+                        "archivo": clave,
+                        "direccion_original": direccion,
+                        "ciudad_original": ciudad_original,
+                        "direccion_similar": coincidencia,
+                        "similitud": puntaje,
+                        "lat": lat,
+                        "lng": lng
+                    })
+
+    # Validación de resultados
+    if not filas:
+        print(f"No se encontraron direcciones válidas en {ciudad}.")
+        return None
+
+    df = pd.DataFrame(filas)
+    df.to_excel("direcciones_resultado.xlsx", index=False)
+    print(f"Resultados guardados en 'direcciones_resultado.xlsx'")
+
+    # Subir a S3
+    s3.upload_file("direcciones_resultado.xlsx", bucket_name, "direcciones_resultado.xlsx")
+    print(f"Archivo subido a s3://{bucket_name}/direcciones_resultado.xlsx")
+
+    # Generar mapa
+    mapa = folium.Map(location=[df["lat"].mean(), df["lng"].mean()], zoom_start=12)
+    marker_cluster = MarkerCluster().add_to(mapa)
+
+    for _, fila in df.iterrows():
+        color = "green" if fila["similitud"] >= 90 else "orange"
+        popup = (
+            f"<b>Dirección:</b> {fila['direccion_similar']}<br>"
+            f"<b>Similitud:</b> {fila['similitud']:.2f}%<br>"
+            f"<b>Ciudad:</b> {fila['ciudad_original']}"
+        )
+        folium.Marker(
+            location=[fila["lat"], fila["lng"]],
+            popup=popup,
+            icon=folium.Icon(color=color)
+        ).add_to(marker_cluster)
+
+    mapa.save("mapa_direcciones.html")
+    print(f"Mapa generado para {ciudad} y guardado como 'mapa_direcciones.html'")
+
+    return df
+
+#%% Generación  del mapa
+if __name__ == "__main__":
+    resultado_df = procesar_archivos_y_generar_mapa(bucket_name="prueba-wenia", ciudad="BOGOTA")
+    if resultado_df is not None:
+        print(resultado_df.head(8))
+        import webbrowser
+        webbrowser.open("mapa_direcciones.html")
