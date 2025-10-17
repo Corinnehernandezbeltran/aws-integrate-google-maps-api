@@ -1,11 +1,12 @@
-boto3
 pdfplumber
 pytesseract
-Pillow
+pillow
+boto3
 googlemaps
 folium
 rapidfuzz
 openpyxl
 pandas
-reportlab
 faker
+reportlab
+unidecode
