@@ -25,74 +25,69 @@ import googlemaps
 import folium
 from folium.plugins import MarkerCluster
 from unidecode import unidecode
+import unittest
+import datetime # Se incluye la librería datetime
 
-#%%Configuracion credenciales AWS
+#%% Configuración de credenciales AWS
 AWS_ACCESS_KEY_ID = input("ATENCIÓN! Ingresa tu AWS_ACCESS_KEY_ID: ")
 AWS_SECRET_ACCESS_KEY = input("ATENCIÓN! Ingresa tu AWS_SECRET_ACCESS_KEY: ")
-AWS_DEFAULT_REGION = "us-east-2"  # Region Ohio para el ejercicio.
+AWS_DEFAULT_REGION = "us-east-2"
 
 os.environ["AWS_ACCESS_KEY_ID"] = AWS_ACCESS_KEY_ID
 os.environ["AWS_SECRET_ACCESS_KEY"] = AWS_SECRET_ACCESS_KEY
 os.environ["AWS_DEFAULT_REGION"] = AWS_DEFAULT_REGION
 
-print("Credenciales cargadas de forma temporal y segura.")
+print("Credenciales de AWS, cargadas.")
 
-#%% Se ingresa la clave de google api para utilizar el servicio.
+#%% Ingreso de clave de Google Maps API
 GOOGLE_API_KEY = input("ATENCIÓN! Ingresa tu API key de Google Maps:  ")
 os.environ["GOOGLE_API_KEY"] = GOOGLE_API_KEY
 
-#%%% Configuración de Faker, para generar dircciones falsas pero realistas
+#%% Generación de datos para Bogotá (sólo formatos válidos)
+def crear_direccion_bogota():
+    """
+    Inventa una dirección de Bogotá con el formato estándar colombiano (CRA/CLL # n-n)!
+    Esto es solo para generar datos de prueba validos.
+    """
+    tipos_via = ["CRA", "CLL", "TRANSV"]
+    via = random.choice(tipos_via)
+    principal = random.randint(1, 120)
+    secundaria = f"{random.randint(1, 120)}{random.choice(['', 'A', 'B'])}"
+    interior = random.randint(1, 120)
+    return f"{via} {principal} # {secundaria}-{interior}", "Bogotá"
+
 generador = Faker("es_CO")
 os.makedirs("documentos_clientes_wenia", exist_ok=True)
 
-def crear_direccion():
-    tipos_via = ["CRA", "KRA", "CALLE", "AV", "TRANSVERSAL"]
-    return f"{random.choice(tipos_via)} {random.randint(1,99)} # {random.randint(1,99)} - {random.randint(1,99)}"
-
-cantidad_clientes = 40
+cantidad_clientes = 100
 lista_clientes = []
-N_BOGOTA = 12
+nombre_bucket = "prueba-wenia" # Definición global del bucket
 
 for i in range(cantidad_clientes):
     nombre = generador.name()
-
-    # Las primeras N direcciones serán de Bogotá, el resto aleatorias
-    if i < N_BOGOTA:
-        ciudad = "Bogotá"
-    else:
-        ciudad = generador.city()
-
-    direccion = f"{crear_direccion()}, {ciudad}"
+    direccion, ciudad = crear_direccion_bogota()
     correo = generador.email()
 
     lista_clientes.append({
         "id_cliente": i + 1,
         "nombre": nombre,
-        "direccion": direccion,
+        "direccion": f"{direccion}, {ciudad}",
         "correo": correo,
     })
-
-    # Generar PDF individual
     ruta_pdf = f"documentos_clientes_wenia/cliente_wenialover{i+1}.pdf"
     pdf = canvas.Canvas(ruta_pdf, pagesize=letter)
     pdf.drawString(100, 750, f"Registro del cliente {nombre}")
     pdf.drawString(100, 710, f"Correo: {correo}")
-    pdf.drawString(100, 670, f"Dirección: {direccion}")
+    pdf.drawString(100, 670, f"Dirección: {direccion}, {ciudad}")
     pdf.save()
-
-# Guardar base de datos simulada
 
 clientes_df = pd.DataFrame(lista_clientes)
 ruta_excel = "clientes_simulados.xlsx"
 clientes_df.to_excel(ruta_excel, index=False)
 print(f"Generados {cantidad_clientes} clientes y sus PDFs.")
 
-# Subir archivos a S3
-
-nombre_bucket = "prueba-wenia"
 s3 = boto3.client("s3")
 
-# Verificar si el bucket existe; si no, crearlo directamente en s3
 try:
     s3.head_bucket(Bucket=nombre_bucket)
     print(f"El bucket '{nombre_bucket}' ya existe.")
@@ -106,16 +101,14 @@ except s3.exceptions.ClientError as e:
         )
         print(f"Bucket '{nombre_bucket}' creado exitosamente.")
     else:
-        raise e  # Si el error no es "no existe", se lanza para no ocultar otros problemas
+        raise e
 
-# Subir Excel
 try:
     s3.upload_file(ruta_excel, nombre_bucket, os.path.basename(ruta_excel))
     print(f"Subido a s3://{nombre_bucket}/{os.path.basename(ruta_excel)}")
 except Exception as e:
     print("Error subiendo Excel:", e)
 
-# Subir PDFs
 for archivo in os.listdir("documentos_clientes_wenia"):
     ruta_local = os.path.join("documentos_clientes_wenia", archivo)
     if os.path.isfile(ruta_local):
@@ -124,132 +117,120 @@ for archivo in os.listdir("documentos_clientes_wenia"):
         except Exception as e:
             print(f"Error subiendo {archivo}:", e)
 
-print("Todos los PDFs fueron subidos a S3 correctamente, finaliza creación datos y cargue")
+print("Todos los PDFs fueron subidos a S3 correctamente.")
 
-
-#%% En esta sección se definen las funciones utilizadas para:
-# - Limpieza y estandarización de direcciones.
-# - Generación de variantes para comparación de similitud.
-# - Evaluación de similitud entre direcciones con RapidFuzz.
-# - Geocodificación de direcciones usando la API de Google Maps.
-
-#Función para extraer texto de archivos PDF
+#%% Función para extraer texto del OCR
 def extraer_texto(archivo_bytes, nombre_archivo):
-    """Extrae el texto de un archivo PDF; si extract_text falla, aplica OCR por página."""
+    """
+    Saca el texto de un PDF.
+    Devuelve todo el texto en MAYÚSCULAS y sin tildes.
+    """
     nombre_archivo = nombre_archivo.lower()
     if not nombre_archivo.endswith(".pdf"):
         raise ValueError("El archivo no es un PDF válido.")
-
     texto_total = ""
     with pdfplumber.open(io.BytesIO(archivo_bytes)) as pdf:
         for pagina in pdf.pages:
-            # Intento nativo de extracción
             texto_pagina = pagina.extract_text() or ""
             if texto_pagina.strip():
                 texto_total += texto_pagina + "\n"
                 continue
-
-            # Si no hay texto, tomo la página como imagen y aplico OCR
             try:
-                im = pagina.to_image(resolution=300).original  # PIL Image
+                im = pagina.to_image(resolution=300).original
                 texto_ocr = pytesseract.image_to_string(im, lang="spa")
                 texto_total += texto_ocr + "\n"
             except Exception as e:
-                # Si falla OCR, continuar y reportar
                 print(f"Warning: OCR falló en {nombre_archivo} página {pagina.page_number}: {e}")
                 continue
-
     return unidecode(texto_total).upper()
 
-#Funcion para limpieza de la dirección y estandarizar una dirección que ya fue identificada
+#%% Funcion para limpiar dirección
 def limpiar_direccion(direccion):
     """
-    Limpia y estandariza una dirección eliminando tildes,
-    símbolos innecesarios y espacios múltiples.
+    Pone la dirección en mayúsculas, elimina tildes y símbolos raros (#, ., -), y corrige espacios dobles.
     """
-    direccion = unidecode(direccion.upper().strip())  # elimina tildes y pone en MAYUS
-    direccion = re.sub(r'[.#]', '', direccion)        # quita puntos y #
-    direccion = re.sub(r'\s+', ' ', direccion)        # reemplaza espacios múltiples
-    return direccion
+    direccion = unidecode(direccion.upper().strip())
+    direccion = re.sub(r'[\.\#,\-]', ' ', direccion)
+    direccion = re.sub(r'\s+', ' ', direccion)
+    return direccion.strip()
 
-#Funcion para  buscar dentro de un texto completo (pdf )la línea que contiene la dirección
+#%% Funcion para buscar dirección
 def buscar_direccion(texto: str) -> list:
     """
-    Busca el texto de la dirección que sigue a 'DIRECCION:' o 'DIRECCIÓN:' y lo devuelve
-    limpio y estandarizado.
+    Busca la línea de texto que viene justo después de la etiqueta 'DIRECCION:'.
     """
-    # Asegurar texto en mayúsculas y sin tildes
-    texto = unidecode(texto.upper())  # <-- requiere importar unidecode
-
-    # Patrón que busca tanto DIRECCION como DIRECCIÓN
+    texto = unidecode(texto.upper())
     patron_especifico = r"DIRECCION:\s*(.*)"
-
     match = re.search(patron_especifico, texto)
     if match:
         direccion_encontrada = match.group(1).strip()
-        direccion_limpia = limpiar_direccion(direccion_encontrada)
-        return [direccion_limpia]
+        return [direccion_encontrada]
     return []
 
-# Función crear diferentes versiones equivalentes de una misma dirección, para luego compararlas 
-def generar_variantes(direccion):
+#%% Función para generar variantes de una dirección
+def generar_variantes(direccion: str):
     """
-    Genera distintas versiones de una dirección, asegurando que estén limpias
-    y listas para la comparación de similitud.
+    Crea todas las formas posibles de escribir una dirección (Kra, Carrera, #, Nro, etc.) 
+    basándose en el formato estándar.
     """
-    base = direccion.upper().strip()
+    direccion = direccion.strip().upper()
+    patron = r'^(CRA|CLL|TRANSV)\s+(\d+)\s+#\s*([A-Z0-9]+)[ -]+(\d+)$'
+    match = re.match(patron, direccion)
+    if not match:
+        raise ValueError(f"Dirección no válida: {direccion}")
 
-    variantes = [
-        # Las variantes deben estar limpias para igualar la 'base limpia' en la comparación
-        limpiar_direccion(base), # Version base, limpia y sin dobles espacios
-        limpiar_direccion(base.replace("CRA", "KRA")),
-        limpiar_direccion(base.replace("CRA", "CARRERA")),
-        limpiar_direccion(base.replace("#", "Nro")),
-        limpiar_direccion(base.replace("-", " ")),
-    ]
+    via, num_principal, sufijo, num_final = match.groups()
+    sufijo = sufijo.upper()
 
-    #  set para eliminar duplicados
-    return list(set(variantes))
+    vias = ["Carrera", "Kra", "Calle", "Transversal", "Avenida"]
+    numeros = ["#", "Num", "Numero", "Nro"]
 
-#Funcion para comparar variantes de texto y medir similitud entre las mismas.
+    variantes = []
+    for via_nombre in vias:
+        for num_formato in numeros:
+            if num_formato == "#":
+                variante = f"{via_nombre} {num_principal} # {sufijo}-{num_final}"
+            else:
+                variante = f"{via_nombre} {num_principal} {num_formato} {sufijo}-{num_final}"
+            variantes.append(variante)
+    return variantes
+
+#%% Función para compaación de variantes de la dirección
 def comparar_variantes(original, variantes, umbral=90):
     """
-    Compara una dirección original con un conjunto de variantes y calcula
-    su nivel de similitud utilizando RapidFuzz.
-    Retorna las variantes que superen el umbral definido, en este caso 90.
+    Compara la dirección original con todas sus variantes usando RapidFuzz. 
+    Solo devuelve las variantes que superan el umbral (ej. 90%).
     """
     coincidencias = []
     for v in variantes:
-        puntaje = fuzz.ratio(original, v)
+        puntaje = fuzz.token_sort_ratio(limpiar_direccion(original), limpiar_direccion(v))
         if puntaje >= umbral:
             coincidencias.append((v, puntaje))
     return coincidencias
 
-#Función para conecta con la API de Google Maps y convierte una dirección de texto (latitud y longitud)
-gmaps = googlemaps.Client(key=os.getenv("GOOGLE_API_KEY")) #Ok clave ingresada arriba
+#%% Función para geocodificar las direcciones y variantes.
+gmaps = googlemaps.Client(key=os.getenv("GOOGLE_API_KEY"))
 
 def geocodificar_direccion(direccion, ciudad="BOGOTA"):
     """
-    Usa la API de Google Maps para convertir una dirección en coordenadas geográficas.
-    Todas las direcciones se restringen a la ciudad especificada
+    Manda la dirección a Google Maps para que nos retorne la Latitud y Longitud exacta. 
+    La búsqueda se restringe a la ciudad especificada.
     """
     try:
-        # Limitar el ámbito de búsqueda a la ciudad y a Colombia
-        consulta = f"{direccion}, {ciudad}, Colombia"
-        resultado = gmaps.geocode(consulta)
-
+        resultado = gmaps.geocode(f"{direccion}, {ciudad}, Colombia")
         if not resultado:
             return None, None
-
-        ubicacion = resultado[0]['geometry']['location']
-        return ubicacion['lat'], ubicacion['lng']
-
+        lat = resultado[0]["geometry"]["location"]["lat"]
+        lng = resultado[0]["geometry"]["location"]["lng"]
+        return lat, lng
     except Exception as e:
-        print("Error al geocodificar la dirección:", direccion, e)
+        print(f"Error geocodificando {direccion}: {e}")
         return None, None
 
-#Funcion para listar todos los objetos (paginación)
 def listar_todos_objetos_s3(s3_client, bucket_name, prefix=None):
+    """
+    Recorre tu bucket de AWS y devuelve la lista de todos los archivos que hay allí, manejando la paginación.
+    """
     objetos = []
     paginator = s3_client.get_paginator('list_objects_v2')
     page_iterator = paginator.paginate(Bucket=bucket_name, Prefix=prefix or "")
@@ -258,113 +239,101 @@ def listar_todos_objetos_s3(s3_client, bucket_name, prefix=None):
             objetos.extend(page["Contents"])
     return objetos
 
-# Función principal para procesar los archivos del bucket y generar el mapa de direcciones
+#%% Procesar y graficar SOLO la mejor similitud
 def procesar_archivos_y_generar_mapa(bucket_name="prueba-wenia", ciudad="BOGOTA", umbral_similitud=90):
     """
-    Procesa archivos PDF de un bucket S3, extrae direcciones y genera un mapa.
-
-    Pasos principales:
-    1. Descarga PDFs desde S3 y extrae direcciones mediante OCR.
-    2. Filtra direcciones por ciudad (por defecto: BOGOTA).
-    3. Calcula similitud entre variantes de dirección.
-    4. Geocodifica direcciones válidas y genera un mapa con Folium.
-    5. Guarda resultados en un archivo Excel y un mapa HTML, y los sube al bucket.
-
-    Parámetros:
-        bucket_name (str): Nombre del bucket S3 origen y destino.
-        ciudad (str): Ciudad objetivo para filtrar direcciones.
-        umbral_similitud (float): Valor mínimo de similitud para considerar coincidencias.
-
-    Retorna:
-        pd.DataFrame: DataFrame con columnas [archivo, direccion_original, ciudad_original,
-        direccion_similar, similitud, lat, lng].
+    Orquesta la descarga, el filtrado estricto por ciudad, la búsqueda de variantes, 
+    la geocodificación y el guardado final de resultados (Excel y mapa HTML) en la carpeta local descargas y S3.
     """
     s3 = boto3.client("s3")
     respuesta = listar_todos_objetos_s3(s3, bucket_name)
 
     if not respuesta:
         print("No se encontraron archivos en el bucket.")
-        return None
+        return None, None
 
-    filas = []  
-
+    filas = []
     for obj in respuesta:
         clave = obj["Key"]
-
-        # Filtrar solo archivos PDF
         if not clave.lower().endswith(".pdf"):
             continue
 
-        # Descargar el archivo desde S3 en memoria
         archivo = io.BytesIO()
         s3.download_fileobj(bucket_name, clave, archivo)
         archivo.seek(0)
 
-        # Extraer texto del PDF
         texto = extraer_texto(archivo.getvalue(), clave)
         direcciones = buscar_direccion(texto)
         if not direcciones:
             continue
 
-        # Filtro y geocodificación
         for direccion in direcciones:
-            direccion_limpia = limpiar_direccion(direccion)  # aqui se hace unidecode + upper
-
-            if ',' in direccion_limpia:
-                partes = direccion_limpia.rsplit(',', 1)
+            if ',' in direccion:
+                partes = direccion.rsplit(',', 1)
                 direccion_sin_ciudad = partes[0].strip()
                 ciudad_original = partes[1].strip()
             else:
-                direccion_sin_ciudad = direccion_limpia
+                direccion_sin_ciudad = direccion.strip()
                 ciudad_original = ""
 
             ciudad_objetivo_norm = unidecode(ciudad).upper()
 
-            # Asegurar comparación en mayúsculas
-            if not ciudad_original:
+            if ciudad_original:
+                if ciudad_original.upper() != ciudad_objetivo_norm:
+                    continue
+            else:
                 ciudad_original = ciudad_objetivo_norm
-            elif ciudad_objetivo_norm not in ciudad_original.upper():
+
+            try:
+                variantes = generar_variantes(direccion_sin_ciudad)
+            except Exception as ex:
+                print(f"Dirección '{direccion_sin_ciudad}' no válida para variantes. Saltando. Error: {ex}")
                 continue
+            coincidencias = comparar_variantes(direccion_sin_ciudad, variantes, umbral_similitud)
 
-            direccion_para_geo = f"{direccion_sin_ciudad}, {ciudad_objetivo_norm}"
-
-            variantes = generar_variantes(direccion_para_geo)
-            coincidencias = comparar_variantes(direccion_para_geo, variantes, umbral_similitud)
-
-            for coincidencia, puntaje in coincidencias:
-                # Manejo de errores en geocodificación
-                try:
-                    lat, lng = geocodificar_direccion(coincidencia, ciudad=ciudad_objetivo_norm)
-                except Exception as e:
-                    print(f"Error al geocodificar {coincidencia}: {e}")
-                    lat, lng = None, None
-
+            if coincidencias:
+                mejor_coincidencia, mejor_similitud = max(coincidencias, key=lambda x: x[1])
+                lat, lng = geocodificar_direccion(mejor_coincidencia, ciudad=ciudad_objetivo_norm)
                 if lat is not None and lng is not None:
                     filas.append({
                         "archivo": clave,
                         "direccion_original": direccion,
                         "ciudad_original": ciudad_original,
-                        "direccion_similar": coincidencia,
-                        "similitud": puntaje,
+                        "direccion_similar": mejor_coincidencia,
+                        "similitud": mejor_similitud,
                         "lat": lat,
                         "lng": lng
                     })
 
-    # Validación de resultados
     if not filas:
         print(f"No se encontraron direcciones válidas en {ciudad}.")
-        return None
+        return None, None
 
     df = pd.DataFrame(filas)
-    df.to_excel("direcciones_resultado.xlsx", index=False)
-    print(f"Resultados guardados en 'direcciones_resultado.xlsx'")
 
-    # Subir a S3
-    s3.upload_file("direcciones_resultado.xlsx", bucket_name, "direcciones_resultado.xlsx")
-    print(f"Archivo subido a s3://{bucket_name}/direcciones_resultado.xlsx")
+    # Guardar localmente y subir a S3 (ambos archivos) 
+    
+    carpeta_descargas = os.path.expanduser(r"C:\Users\user\Downloads") 
+    os.makedirs(carpeta_descargas, exist_ok=True)
 
-    # Generar mapa
-    mapa = folium.Map(location=[df["lat"].mean(), df["lng"].mean()], zoom_start=12)
+    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    
+    # Nombres de archivo base
+    excel_file_name = f"direcciones_resultado_{timestamp}.xlsx"
+    map_file_name = f"mapa_direcciones_{timestamp}.html"
+    
+    # Rutas locales (en carpeta_descargas)
+    excel_path = os.path.join(carpeta_descargas, excel_file_name)
+    mapa_path = os.path.join(carpeta_descargas, map_file_name)
+
+    # Guardar Excel localmente
+    df.to_excel(excel_path, index=False)
+    print(f"Resultados guardados localmente en '{excel_path}'")
+    
+    # Generar y guardar mapa localmente
+    lat_centro = df["lat"].mean()
+    lng_centro = df["lng"].mean()
+    mapa = folium.Map(location=[lat_centro, lng_centro], zoom_start=12)
     marker_cluster = MarkerCluster().add_to(mapa)
 
     for _, fila in df.iterrows():
@@ -379,16 +348,73 @@ def procesar_archivos_y_generar_mapa(bucket_name="prueba-wenia", ciudad="BOGOTA"
             popup=popup,
             icon=folium.Icon(color=color)
         ).add_to(marker_cluster)
+        
+    mapa.save(mapa_path) 
+    print(f"Mapa generado y guardado en '{mapa_path}'")
+    
+    # Subir a S3 
+    try:
+        # Subir Excel
+        s3.upload_file(excel_path, bucket_name, excel_file_name)
+        print(f"Subido Excel a s3://{bucket_name}/{excel_file_name}")
+        
+        # Subir Mapa HTML
+        s3.upload_file(mapa_path, bucket_name, map_file_name)
+        print(f"Subido Mapa a s3://{bucket_name}/{map_file_name}")
+        
+    except Exception as e:
+        print(f"Error subiendo archivos a S3:", e)
 
-    mapa.save("mapa_direcciones.html")
-    print(f"Mapa generado para {ciudad} y guardado como 'mapa_direcciones.html'")
+    return df, mapa_path
 
-    return df
+#%% Pruebas unitarias
+class TestDireccionesBogota(unittest.TestCase):
 
-#%% Generación  del mapa
-if __name__ == "__main__":
-    resultado_df = procesar_archivos_y_generar_mapa(bucket_name="prueba-wenia", ciudad="BOGOTA")
+    def test_generar_variantes_cantidad(self):
+        direccion = "CLL 45 # 56-89"
+        variantes = generar_variantes(direccion)
+        self.assertEqual(len(variantes), 20)
+        for via in ["Calle", "Carrera", "Kra", "Transversal", "Avenida"]:
+            self.assertTrue(any(via in v for v in variantes), f"Falta via {via}")
+        for num_f in ["#", "Nro", "Num", "Numero"]:
+            self.assertTrue(any(f" {num_f} " in v or f" {num_f}# " in v for v in variantes), f"Falta num formato {num_f}")
+
+    def test_generar_variantes_no_original(self):
+        direccion = "CRA 88 # 11A-17"
+        variantes = generar_variantes(direccion)
+        self.assertNotIn("CRA 88 # 11A-17", variantes)
+        self.assertNotIn("Cra 88 # 11A-17", variantes)
+
+    def test_generar_variantes_format_invalido(self):
+        with self.assertRaises(ValueError):
+            generar_variantes("AV 12 # 34-56")
+        with self.assertRaises(ValueError):
+            generar_variantes("CALLE 90#20A-15")
+
+    def test_limpiar_direccion(self):
+        inp = "Cll. 80 # 34-12, Bogotá"
+        esperado = "CLL 80 34 12 BOGOTA"
+        resultado = limpiar_direccion(inp)
+        self.assertEqual(resultado, esperado)
+
+    def test_similitud(self):
+        v1 = "Carrera 12 # 90-45"
+        variantes = generar_variantes("CRA 12 # 90-45")
+        simis = comparar_variantes(v1, variantes, umbral=96)
+        self.assertTrue(any("Carrera 12 # 90-45" in v[0] for v in simis))
+        simis_baja = comparar_variantes("Calle 99 # 99-99", variantes, umbral=96)
+        self.assertFalse(simis_baja)
+
+    def test_buscar_direccion(self):
+        texto = "Direccion: CLL 51 # 12B-66\nOtra cosa"
+        lista = buscar_direccion(texto)
+        self.assertTrue(lista)
+        self.assertEqual(lista[0], "CLL 51 # 12B-66")
+
+#%% MAIN ejecutable
+if __name__ == "__main__": 
+    resultado_df, mapa_path = procesar_archivos_y_generar_mapa(bucket_name="prueba-wenia", ciudad="BOGOTA")
     if resultado_df is not None:
         print(resultado_df.head(8))
         import webbrowser
-        webbrowser.open("mapa_direcciones.html")
+        webbrowser.open(mapa_path)
