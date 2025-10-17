@@ -229,7 +229,7 @@ def geocodificar_direccion(direccion, ciudad="BOGOTA"):
 
 def listar_todos_objetos_s3(s3_client, bucket_name, prefix=None):
     """
-    Recorre tu bucket de AWS y devuelve la lista de todos los archivos que hay allí, manejando la paginación.
+    Recorre el bucket de AWS y devuelve la lista de todos los archivos que hay allí, manejando la paginación.
     """
     objetos = []
     paginator = s3_client.get_paginator('list_objects_v2')
